@@ -1,0 +1,8 @@
+alias pyDecrypt='python3 /home/ianemn/utils/decrypt.py'
+alias pyEncrypt='python3 /home/ianemn/utils/encrypt.py'
+alias pymultiMedia='python3 /home/ianemn/utils/multiMedia.py'
+alias pyUnzip='python3 /home/ianemn/utils/unzip.py'
+alias pyweb='python3 /home/ianemn/utils/web.py'
+alias pywget='python3 /home/ianemn/utils/wget.py'
+alias pyZip='python3 /home/ianemn/utils/zip.py'
+alias miconfig='sudo sysctl net.ipv6.conf.all.disable_ipv6=1'

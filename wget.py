@@ -42,15 +42,12 @@ def getArchivos(soup, ext):
         img = soup.find_all("img")
         video = soup.find_all("video")
         audio = soup.find_all("audio")
-        a = soup.find_all("a")
         for i in img:
             archivos.append(i)
         for i in video:
             archivos.append(i)
         for i in audio:
             archivos.append(audio)
-        for i in a:
-            archivos.append(i)
     else:
         archivos = soup.find_all(ext)
 

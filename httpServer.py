@@ -29,7 +29,7 @@ def getResponseFile(ubicacion):
     elif ubicacion.endswith(".css"):
         return f"<a href={href}> <img src=\".httpServer/css.png\"></img> <br> <b>{ubicacion}</b> </a>"
     elif os.path.isdir(f"{directorio}/{ubicacion}"):
-        return f"<a href""> <img src=\".httpServer/dir.png\"></img> <br> <b>{ubicacion}</b></a>"
+        return f"<a href=\'\'> <img src=\".httpServer/dir.png\"></img> <br>  <b>{ubicacion}</b> </a>"
     elif ubicacion.endswith(".ods") or ubicacion.endswith(".xlsx"):
         return f"<a href={href}> <img src=\".httpServer/excel.png\"></img> <br> <b>{ubicacion}</b> </a>"
     elif ubicacion.endswith(".xcf"):
@@ -67,7 +67,7 @@ def getResponseFile(ubicacion):
     elif ubicacion.endswith(".odt") or ubicacion.endswith(".docx"):
         return f"<a href={href}> <img src=\".httpServer/word.png\"></img> <br> <b>{ubicacion}</b> </a>"
     else:
-        return f"<a href={href}> <b>{ubicacion}</b> </a>"
+        return f"<a href={href}> <img src=\".httpServer/file.png\"></img> <br> <b>{ubicacion}</b> </a>"
 
 def isImage(ubicacion):
     ext = [".jpg", ".png", ".jpeg", ".webp", ".gif"]

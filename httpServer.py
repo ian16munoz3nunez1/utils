@@ -29,7 +29,7 @@ def getResponseFile(ubicacion):
     elif ubicacion.endswith(".css"):
         return f"<a href={href}> <img src=\".httpServer/css.png\"></img> <br> <b>{ubicacion}</b> </a>"
     elif os.path.isdir(f"{directorio}/{ubicacion}"):
-        return f"<img src=\".httpServer/dir.png\"></img> <br> <b>{ubicacion}</b>"
+        return f"<a href""> <img src=\".httpServer/dir.png\"></img> <br> <b>{ubicacion}</b></a>"
     elif ubicacion.endswith(".ods") or ubicacion.endswith(".xlsx"):
         return f"<a href={href}> <img src=\".httpServer/excel.png\"></img> <br> <b>{ubicacion}</b> </a>"
     elif ubicacion.endswith(".xcf"):

@@ -61,7 +61,7 @@ elif len(sys.argv) == 3:
 
 valido, extension = getExt(url)
 
-if valido and len(sys.argv) == 2 and extension is not None:
+if valido and extension is not None and len(sys.argv) == 2:
     nombre = wgetNombre(url, extension)
 
     req = requests.get(url)
@@ -71,7 +71,7 @@ if valido and len(sys.argv) == 2 and extension is not None:
     archivo.close()
     print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado correctamente")
 
-elif len(sys.argv) == 3 and not valido and extension is None:
+elif not valido and extension is None and len(sys.argv) == 3:
     req = requests.get(url)
     soup = BeautifulSoup(req.text, "html.parser")
 
@@ -98,7 +98,7 @@ elif len(sys.argv) == 3 and not valido and extension is None:
             archivo.close()
             print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado")
 
-elif extension == None and not valido and len(sys.argv) < 3:
+elif not valido and extension is None and len(sys.argv) == 2:
     print(Fore.YELLOW +  "[!] warning")
     try:
         req = request.urlopen(url)

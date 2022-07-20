@@ -21,9 +21,6 @@ elif len(sys.argv) == 3:
         print("Error de sintaxis")
 
 else:
-    host = sys.argv[1]
-    port = int(sys.argv[2])
-
     tcp = TCP("0.0.0.0", 9999)
 
     tcp.shell()

@@ -1,31 +1,37 @@
 from flask import Flask, send_from_directory
 import os
 import sys
+import re
 from colorama import init
 from colorama.ansi import Fore
 
 init(autoreset=True)
 
+# 'getNombre' regresa el nombre de un archivo o directorio
 def getNombre(ubicacion):
     nombre = os.path.abspath(ubicacion)
     nombre = os.path.basename(nombre)
     return nombre
 
+# 'getResponseFiel' regresa etiquetas html dependiendo de la ubicacion recibida
 def getResponseFile(ubicacion):
     href = ubicacion.replace(' ', '%20')
-    if isImage(ubicacion):
+    if isImage(ubicacion): # Regresa una etiqueta html de imagen
         return f"<img src=\"{ubicacion}\"></img>"
-    elif isVideo(ubicacion):
+    elif isVideo(ubicacion): # Regresa una etiqueta html de video
         return f"<video src=\"{ubicacion}\" preload=\"none\" controls loop></video>"
-    elif isAudio(ubicacion):
+    elif isAudio(ubicacion): # Regresa una etiqueta html de audio
         return f"<audio src=\"{ubicacion}\" controls></audio>"
 
+    # Se regresan etiquetas 'href' con distintas imagenes dependiendo del archivo presentado
     elif ubicacion.endswith(".ino"):
         return f"<a href={href}> <img src=\".httpServer/arduino.png\"></img> <br> <b>{ubicacion}</b> </a>"
     elif ubicacion.endswith(".c"):
         return f"<a href={href}> <img src=\".httpServer/c.png\"></img> <br> <b>{ubicacion}</b> </a>"
     elif ubicacion.endswith(".cpp"):
         return f"<a href={href}> <img src=\".httpServer/cpp.png\"></img> <br> <b>{ubicacion}</b> </a>"
+    elif ubicacion.endswith(".cs"):
+        return f"<a href={href}> <img src=\".httpServer/csharp.png\"></img> <br> <b>{ubicacion}</b> </a>"
     elif ubicacion.endswith(".css"):
         return f"<a href={href}> <img src=\".httpServer/css.png\"></img> <br> <b>{ubicacion}</b> </a>"
     elif os.path.isdir(f"{directorio}/{ubicacion}"):
@@ -69,6 +75,7 @@ def getResponseFile(ubicacion):
     else:
         return f"<a href={href}> <img src=\".httpServer/file.png\"></img> <br> <b>{ubicacion}</b> </a>"
 
+# Regresa si una ubicacion es una imagen o no
 def isImage(ubicacion):
     ext = [".jpg", ".png", ".jpeg", ".webp", ".gif"]
     extUpper = [i.upper() for i in ext]
@@ -82,6 +89,7 @@ def isImage(ubicacion):
         i += 1
     return imagen
 
+# Regresa su una ubicacion es un video o no
 def isVideo(ubicacion):
     ext = [".mp4", ".avi", ".mkv", ".webm"]
     extUpper = [i.upper() for i in ext]
@@ -95,6 +103,7 @@ def isVideo(ubicacion):
         i += 1
     return video
 
+# Regresa si una ubicacion es un audio o no
 def isAudio(ubicacion):
     ext = [".mp3", ".mpga", ".wav", ".opus"]
     extUpper = [i.upper() for i in ext]
@@ -108,26 +117,82 @@ def isAudio(ubicacion):
         i += 1
     return audio
 
-puerto = int(sys.argv[1])
-if len(sys.argv) == 2:
-    directorio = os.getcwd()
-elif len(sys.argv) == 3:
-    directorio = os.getcwd()
-    show = int(sys.argv[2])
-elif len(sys.argv) == 4:
-    show = int(sys.argv[2])
-    directorio = os.getcwd() + '/' + sys.argv[3]
+# Regresa los parametros del comando ingresado
+def params(cmd):
+    # Se localizan las banderas
+    mDir = re.search("-d[= ]", cmd)
+    mPort = re.search("-p[= ]", cmd)
+    mShow = re.search("-s[= ]", cmd)
 
+    sPort = mPort.start() # Inicio de la bandera '-p'
+    sShow = mShow.start() # Inicio de la bandera '-s'
+    ePort = mPort.end() # Fin de la bandera '-p'
+    eShow = mShow.end() # Fin de la bandera '-s'
+
+    if re.search("-d[= ]", cmd):
+        sDir = mDir.start() # Inicio de la bandera '-d'
+        eDir = mDir.end() # Fin de la bandera '-d'
+        directorio = os.getcwd() + '/' # Se inicializa la variable 'directorio'
+
+        if sPort < sShow and sShow < sDir: # Se condicionan las posiciones de las banderas
+            puerto = int(cmd[ePort:sShow-1]) # Se obtiene el valor 'puerto'
+            show = int(cmd[eShow:sDir-1]) # Se obtiene el valor 'show'
+            directorio += cmd[eDir:] # Se obtiene el valor 'directorio' y se agrega a la variable inicial
+        if sPort < sDir and sDir < sShow:
+            puerto = int(cmd[ePort:sDir-1])
+            directorio += cmd[eDir:sShow-1]
+            show = int(cmd[eShow:])
+
+        if sShow < sPort and sPort < sDir:
+            show = int(cmd[eShow:sPort-1])
+            puerto = int(cmd[ePort:sDir-1])
+            directorio += cmd[eDir:]
+        if sShow < sDir and sDir < sPort:
+            show = int(cmd[eShow:sDir-1])
+            directorio += cmd[eDir:sPort-1]
+            puerto = int(cmd[ePort:])
+
+        if sDir < sPort and sPort < sShow:
+            directorio += cmd[eDir:sPort-1]
+            puerto = int(cmd[ePort:sShow-1])
+            show = int(cmd[eShow:])
+        if sDir < sShow and sShow < sPort:
+            directorio += cmd[eDir:sShow-1]
+            show = int(cmd[eShow:sPort-1])
+            puerto = int(cmd[ePort:])
+
+        return directorio, puerto, show # Se regresan los parametros encontrados
+
+    else:
+        directorio = os.getcwd() # Se inicializa la variable 'directorio'
+        if sPort < sShow:
+            puerto = int(cmd[ePort:sShow-1]) # Se obtiene el valor 'puerto'
+            show = int(cmd[eShow:]) # Se obtiene el valor 'show'
+        if sShow < sPort:
+            show = int(cmd[eShow:sPort-1])
+            puerto = int(cmd[ePort:])
+
+        return directorio, puerto, show # Se regresan los parametros encontrados
+
+cmd = ''.join(' ' + i for i in sys.argv) # Se obtiene el comando ingresado
+
+try:
+    directorio, puerto, show = params(cmd) # Se obtienen los parametros del comando
+except:
+    print(Fore.RED + "[-] Error de sintaxis")
+    exit()
 
 if os.path.isdir(directorio):
+    # Se inicia la aplicacion Flask
     app = Flask(__name__,
                 static_url_path='',
                 static_folder='.')
 
     @app.route("/")
     def principal():
-        nombre = getNombre(directorio)
-        tam = len(os.listdir(directorio))
+        nombre = getNombre(directorio) # Se obtiene el nombre del directorio
+        tam = len(os.listdir(directorio)) # Se obtiene el numero de archivos del directorio
+        # Se crea una 'response' html para regresar al cliente
         response = "<head>"
         response += f"<title> {nombre} - {tam} elementos </title>"
         response += f"<meta charset=\"utf-8\">"
@@ -204,12 +269,13 @@ if os.path.isdir(directorio):
             response += "<section class=\"galeria\">"
             for i in os.listdir(directorio):
                 if show == 1:
-                    response += getResponseFile(i)
+                    response += getResponseFile(i) # Se agrega a la 'response' una etiqueta dependiendo del archivo
             response += "</section>"
 
         else:
             response += f"<ul>"
             for i in os.listdir(directorio):
+                # Se agrega a la 'response' un href con el nombre del archivo o directorio
                 href = i.replace(' ', "%20")
                 if os.path.isdir(f"{directorio}/{i}"):
                     response += f"<li> <a href={href}> {i}/ </a> </li>"
@@ -217,13 +283,17 @@ if os.path.isdir(directorio):
                     response += f"<li> <a href={href}> {i} </a> </li>"
             response += "</ul>"
 
-        return response
+        return response # Se regresa la response
 
     @app.route("/<string:file>")
     def archivo(file):
-        return send_from_directory(directorio, path=file, as_attachment=False)
+        # Se regresa un archivo al cliente
+        try:
+            return send_from_directory(directorio, path=file, as_attachment=False)
+        except:
+            return send_from_directory(directorio, filename=file, as_attachment=False)
 
-    app.run(host="0.0.0.0", port=puerto, debug=True)
+    app.run(host="0.0.0.0", port=puerto, debug=True) # Se corre la aplicacion Flask
 
 else:
     print(Fore.YELLOW + f"[!] Directorio \"{directorio}\" no encontrado")

@@ -117,183 +117,145 @@ def isAudio(ubicacion):
         i += 1
     return audio
 
-# Regresa los parametros del comando ingresado
 def params(cmd):
-    # Se localizan las banderas
-    mDir = re.search("-d[= ]", cmd)
-    mPort = re.search("-p[= ]", cmd)
-    mShow = re.search("-s[= ]", cmd)
+    directorio = os.getcwd() + '/'
+    show = False
 
-    sPort = mPort.start() # Inicio de la bandera '-p'
-    sShow = mShow.start() # Inicio de la bandera '-s'
-    ePort = mPort.end() # Fin de la bandera '-p'
-    eShow = mShow.end() # Fin de la bandera '-s'
+    try:
+        puerto = int(re.findall("-p[= ]([0-9]+) -[ds]+", cmd)[0])
+    except:
+        puerto = int(re.findall("-p[= ]([0-9]+)", cmd)[0])
 
     if re.search("-d[= ]", cmd):
-        sDir = mDir.start() # Inicio de la bandera '-d'
-        eDir = mDir.end() # Fin de la bandera '-d'
-        directorio = os.getcwd() + '/' # Se inicializa la variable 'directorio'
+        try:
+            directorio += re.findall("-d[= ]([\W\w]+) -[ps]+", cmd)[0]
+        except:
+            directorio += re.findall("-d[= ]([\W\w]+)", cmd)[0]
 
-        if sPort < sShow and sShow < sDir: # Se condicionan las posiciones de las banderas
-            puerto = int(cmd[ePort:sShow-1]) # Se obtiene el valor 'puerto'
-            show = int(cmd[eShow:sDir-1]) # Se obtiene el valor 'show'
-            directorio += cmd[eDir:] # Se obtiene el valor 'directorio' y se agrega a la variable inicial
-        if sPort < sDir and sDir < sShow:
-            puerto = int(cmd[ePort:sDir-1])
-            directorio += cmd[eDir:sShow-1]
-            show = int(cmd[eShow:])
+    if re.search("-s[= ]", cmd):
+        show = True
 
-        if sShow < sPort and sPort < sDir:
-            show = int(cmd[eShow:sPort-1])
-            puerto = int(cmd[ePort:sDir-1])
-            directorio += cmd[eDir:]
-        if sShow < sDir and sDir < sPort:
-            show = int(cmd[eShow:sDir-1])
-            directorio += cmd[eDir:sPort-1]
-            puerto = int(cmd[ePort:])
-
-        if sDir < sPort and sPort < sShow:
-            directorio += cmd[eDir:sPort-1]
-            puerto = int(cmd[ePort:sShow-1])
-            show = int(cmd[eShow:])
-        if sDir < sShow and sShow < sPort:
-            directorio += cmd[eDir:sShow-1]
-            show = int(cmd[eShow:sPort-1])
-            puerto = int(cmd[ePort:])
-
-        return directorio, puerto, show # Se regresan los parametros encontrados
-
-    else:
-        directorio = os.getcwd() # Se inicializa la variable 'directorio'
-        if sPort < sShow:
-            puerto = int(cmd[ePort:sShow-1]) # Se obtiene el valor 'puerto'
-            show = int(cmd[eShow:]) # Se obtiene el valor 'show'
-        if sShow < sPort:
-            show = int(cmd[eShow:sPort-1])
-            puerto = int(cmd[ePort:])
-
-        return directorio, puerto, show # Se regresan los parametros encontrados
+    return directorio, puerto, show
 
 cmd = ''.join(' ' + i for i in sys.argv) # Se obtiene el comando ingresado
 
-try:
-    directorio, puerto, show = params(cmd) # Se obtienen los parametros del comando
-except:
-    print(Fore.RED + "[-] Error de sintaxis")
-    exit()
+if re.search("-p[= ]", cmd):
+    directorio, puerto, show = params(cmd)
 
-if os.path.isdir(directorio):
-    # Se inicia la aplicacion Flask
-    app = Flask(__name__,
-                static_url_path='',
-                static_folder='.')
+    if os.path.isdir(directorio):
+        # Se inicia la aplicacion Flask
+        app = Flask(__name__,
+                    static_url_path='',
+                    static_folder='.')
 
-    @app.route("/")
-    def principal():
-        nombre = getNombre(directorio) # Se obtiene el nombre del directorio
-        tam = len(os.listdir(directorio)) # Se obtiene el numero de archivos del directorio
-        # Se crea una 'response' html para regresar al cliente
-        response = "<head>"
-        response += f"<title> {nombre} - {tam} elementos </title>"
-        response += f"<meta charset=\"utf-8\">"
-        response += """<style>
-            * {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
+        @app.route("/")
+        def principal():
+            nombre = getNombre(directorio) # Se obtiene el nombre del directorio
+            tam = len(os.listdir(directorio)) # Se obtiene el numero de archivos del directorio
+            # Se crea una 'response' html para regresar al cliente
+            response = "<head>"
+            response += f"<title> {nombre} - {tam} elementos </title>"
+            response += f"<meta charset=\"utf-8\">"
+            response += """<style>
+                * {
+                    box-sizing: border-box;
+                    margin: 0;
+                    padding: 0;
+                }
 
-            body {
-                background-color: rgb(100, 100, 100);
-            }
+                body {
+                    background-color: rgb(100, 100, 100);
+                }
 
-            .galeria {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                width: 95%;
-                margin: auto;
-                row-gap: 10px;
-                column-gap: 10px;
-                padding: 40px 0;
-                overflow: hidden;
-            }
+                .galeria {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    width: 95%;
+                    margin: auto;
+                    row-gap: 10px;
+                    column-gap: 10px;
+                    padding: 40px 0;
+                    overflow: hidden;
+                }
 
-            .galeria img {
-                border-radius: 10%;
-                width: 100%;
-                vertical-align: top;
-                height: 300px;
-                object-fit: cover;
-                display: block;
-                position: relative;
-                overflow: hidden;
-            }
+                .galeria img {
+                    border-radius: 10%;
+                    width: 100%;
+                    vertical-align: top;
+                    height: 300px;
+                    object-fit: cover;
+                    display: block;
+                    position: relative;
+                    overflow: hidden;
+                }
 
-            .galeria video {
-                border-radius: 10%;
-                width: 100%;
-                vertical-align: top;
-                height: 300px;
-                object-fit: cover;
-                display: block;
-                position: relative;
-                overflow: hidden;
-            }
+                .galeria video {
+                    border-radius: 10%;
+                    width: 100%;
+                    vertical-align: top;
+                    height: 300px;
+                    object-fit: cover;
+                    display: block;
+                    position: relative;
+                    overflow: hidden;
+                }
 
-            .galeria audio {
-                border-radius: 10%;
-                width: 100%;
-                vertical-align: top;
-                height: 300px;
-                object-fit: cover;
-                display: block;
-                position: relative;
-                overflow: hidden;
-            }
+                .galeria audio {
+                    border-radius: 10%;
+                    width: 100%;
+                    vertical-align: top;
+                    height: 300px;
+                    object-fit: cover;
+                    display: block;
+                    position: relative;
+                    overflow: hidden;
+                }
 
 
-            .galeria a img {
-                border-radius: 10%;
-                width: 100%;
-                vertical-align: top;
-                height: 300px;
-                object-fit: cover;
-                display: block;
-                position: relative;
-                overflow: hidden;
-            }
-        </style>"""
-        response += "</head>"
-        response += f"<h1> {nombre} - {tam} elementos </h1> <hr>"
-        if show == 1:
-            response += "<section class=\"galeria\">"
-            for i in os.listdir(directorio):
-                if show == 1:
+                .galeria a img {
+                    border-radius: 10%;
+                    width: 100%;
+                    vertical-align: top;
+                    height: 300px;
+                    object-fit: cover;
+                    display: block;
+                    position: relative;
+                    overflow: hidden;
+                }
+            </style>"""
+            response += "</head>"
+            response += f"<h1> {nombre} - {tam} elementos </h1> <hr>"
+            if show:
+                response += "<section class=\"galeria\">"
+                for i in os.listdir(directorio):
                     response += getResponseFile(i) # Se agrega a la 'response' una etiqueta dependiendo del archivo
-            response += "</section>"
+                response += "</section>"
 
-        else:
-            response += f"<ul>"
-            for i in os.listdir(directorio):
-                # Se agrega a la 'response' un href con el nombre del archivo o directorio
-                href = i.replace(' ', "%20")
-                if os.path.isdir(f"{directorio}/{i}"):
-                    response += f"<li> <a href={href}> {i}/ </a> </li>"
-                else:
-                    response += f"<li> <a href={href}> {i} </a> </li>"
-            response += "</ul>"
+            else:
+                response += f"<ul>"
+                for i in os.listdir(directorio):
+                    # Se agrega a la 'response' un href con el nombre del archivo o directorio
+                    href = i.replace(' ', "%20")
+                    if os.path.isdir(f"{directorio}/{i}"):
+                        response += f"<li> <a href={href}> {i}/ </a> </li>"
+                    else:
+                        response += f"<li> <a href={href}> {i} </a> </li>"
+                response += "</ul>"
 
-        return response # Se regresa la response
+            return response # Se regresa la response
 
-    @app.route("/<string:file>")
-    def archivo(file):
-        # Se regresa un archivo al cliente
-        try:
-            return send_from_directory(directorio, path=file, as_attachment=False)
-        except:
-            return send_from_directory(directorio, filename=file, as_attachment=False)
+        @app.route("/<string:file>")
+        def archivo(file):
+            # Se regresa un archivo al cliente
+            try:
+                return send_from_directory(directorio, path=file, as_attachment=False)
+            except:
+                return send_from_directory(directorio, filename=file, as_attachment=False)
 
-    app.run(host="0.0.0.0", port=puerto, debug=True) # Se corre la aplicacion Flask
+        app.run(host="0.0.0.0", port=puerto, debug=True) # Se corre la aplicacion Flask
+
+    else:
+        print(Fore.YELLOW + f"[!] Directorio \"{directorio}\" no encontrado")
 
 else:
-    print(Fore.YELLOW + f"[!] Directorio \"{directorio}\" no encontrado")
+    print(Fore.RED + "[-] error de sintaxis")

@@ -53,64 +53,91 @@ def getArchivos(soup, ext):
 
     return archivos
 
-if len(sys.argv) == 2:
-    url = sys.argv[1]
-elif len(sys.argv) == 3:
-    url = sys.argv[1]
-    ext = sys.argv[2]
+def params(cmd):
+    ext = None
+    nombre = None
 
-valido, extension = getExt(url)
+    try:
+        url = re.findall("-u[= ]([\W\w]+) -[nx]+", cmd)[0]
+    except:
+        url = re.findall("-u[= ]([\W\w]+)", cmd)[0]
 
-if valido and extension is not None and len(sys.argv) == 2:
-    nombre = wgetNombre(url, extension)
-
-    req = requests.get(url)
-
-    with open(nombre, 'wb') as archivo:
-        archivo.write(req.content)
-    archivo.close()
-    print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado correctamente")
-
-elif not valido and extension is None and len(sys.argv) == 3:
-    req = requests.get(url)
-    soup = BeautifulSoup(req.text, "html.parser")
-
-    archivos = getArchivos(soup, ext)
-    for i in archivos:
+    if re.search("-x[= ]", cmd):
         try:
-            if ext == 'a':
-                link = i.get("href")
-            else:
-                link = i.get("src")
-            contenido = requests.get(link)
+            ext = re.findall("-x[= ]([\W\w]+) -[nu]+", cmd)[0]
         except:
-            if ext == 'a':
-                link = url + i.get("href")
-            else:
-                link = url + i.get("src")
-            contenido = requests.get(link)
+            ext = re.findall("-x[= ]([\W\w]+)", cmd)[0]
 
-        extension = getExt(link)[1]
-        if extension is not None:
-            nombre = wgetNombre(link, extension)
+    if re.search("-n[= ]", cmd):
+        try:
+            nombre = re.findall("-n[= ]([\W\w]+) -[ux]+", cmd)[0]
+        except:
+            nombre = re.findall("-n[= ]([\W\w]+)", cmd)[0]
+
+    return url, ext, nombre
+
+cmd = ''.join(' ' + i for i in sys.argv)
+
+if re.search("-u[= ]", cmd):
+    url, ext, nombre = params(cmd)
+
+    valido, extension = getExt(url)
+
+    if re.search("-n[= ]", cmd) and re.search("-x[= ]", cmd):
+        print(Fore.YELLOW + "[!] El nombre y la extension entran en conflicto")
+        exit()
+
+    if valido and extension is not None and not re.search("-n[= ]", cmd):
+        nombre = wgetNombre(url, extension)
+
+        req = requests.get(url)
+
+        with open(nombre, 'wb') as archivo:
+            archivo.write(req.content)
+        archivo.close()
+        print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado correctamente")
+
+    elif not valido and extension is None and re.search("-x[= ]", cmd):
+        req = requests.get(url)
+        soup = BeautifulSoup(req.text, "html.parser")
+
+        archivos = getArchivos(soup, ext)
+        for i in archivos:
+            try:
+                if ext == 'a':
+                    link = i.get("href")
+                else:
+                    link = i.get("src")
+                contenido = requests.get(link)
+            except:
+                if ext == 'a':
+                    link = url + i.get("href")
+                else:
+                    link = url + i.get("src")
+                contenido = requests.get(link)
+
+            extension = getExt(link)[1]
+            if extension is not None:
+                nombre = wgetNombre(link, extension)
+                with open(nombre, 'wb') as archivo:
+                    archivo.write(contenido.content)
+                archivo.close()
+                print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado")
+
+    elif re.search("-n[= ]", cmd) and nombre is not None:
+        try:
+            req = request.urlopen(url)
+
             with open(nombre, 'wb') as archivo:
-                archivo.write(contenido.content)
+                archivo.write(req.read())
             archivo.close()
             print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado")
 
-elif not valido and extension is None and len(sys.argv) == 2:
-    print(Fore.YELLOW +  "[!] warning")
-    try:
-        req = request.urlopen(url)
+        except Exception as e:
+            print(e)
 
-        nombre = input("Ingresa el nombre del archivo: ")
-        with open(nombre, 'wb') as archivo:
-            archivo.write(req.read())
-        archivo.close()
-        print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado")
-
-    except Exception as e:
-        print(e)
+    else:
+        print(Fore.RED + "[-] error")
 
 else:
-    print(Fore.RED + "[-] error")
+    print(Fore.RED + "[-] error de sintaxis")

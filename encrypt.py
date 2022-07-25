@@ -42,27 +42,26 @@ def encriptar(archivos, key):
 
         print(Fore.GREEN + f"[+] Archivo \"{nombre}\" encriptado")
 
+def params(cmd):
+    try:
+        clave = re.findall("-k[= ]([\W\w]+) -e", cmd)[0]
+    except:
+        clave = re.findall("-k[= ]([\W\w]+)", cmd)[0]
+
+    try:
+        ubicacion = re.findall("-e[= ]([\W\w]+) -k", cmd)[0]
+    except:
+        ubicacion = re.findall("-e[= ]([\W\w]+)", cmd)[0]
+
+    return clave, ubicacion
+
 # Se obtiene el comando ingresado
 cmd = ''.join(' ' + i for i in sys.argv)
-try:
-    mKey = re.search("-k[= ]", cmd)
-    mUbicacion = re.search("-p[= ]", cmd)
-
-    # Se obtienen los parametros
-    clave = ''
-    ubicacion = ''
-    if mKey.start() < mUbicacion.start():
-        clave = cmd[mKey.end():mUbicacion.start()-1]
-        ubicacion = cmd[mUbicacion.end():]
-    if mUbicacion.start() < mKey.start():
-        ubicacion = cmd[mUbicacion.end():mKey.start()-1]
-        clave = cmd[mKey.end():]
-
-except:
-    exit()
 
 # Se revisa si los parametros y la sintaxis son correctos
-if re.search("-k[= ]", cmd) and re.search("-p[= ]", cmd):
+if re.search("-k[= ]", cmd) and re.search("-e[= ]", cmd):
+    clave, ubicacion = params(cmd)
+
     # Si la ubicacion ingresada es un archivo...
     if os.path.isfile(ubicacion) and clave.endswith(".key"):
         generarClave(clave) # Se genera una nueva llave

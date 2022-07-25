@@ -13,26 +13,24 @@ def getNombre(ubicacion):
     nombre = os.path.basename(nombre)
     return nombre
 
+def params(cmd):
+    try:
+        origen = re.findall("-i[= ]([\W\w]+) -o", cmd)[0]
+    except:
+        origen = re.findall("-i[= ]([\W\w]+)", cmd)[0]
+
+    try:
+        destino = re.findall("-o[= ]([\W\w]+) -i", cmd)[0]
+    except:
+        destino = re.findall("-o[= ]([\W\w]+)", cmd)[0]
+
+    return origen, destino
+
 cmd = ''.join(' ' + i for i in sys.argv) # Se obtiene el comando ingresado
 
-# Se revisa si la sintaxis y los parametros son correctos
-try:
-    mOrigen = re.search("-o[= ]", cmd)
-    mDestino = re.search("-d[= ]", cmd)
+if re.search("-i[= ]", cmd) and re.search("-o[= ]", cmd):
+    origen, destino = params(cmd)
 
-    origen = ''
-    destino = ''
-    if mOrigen.start() < mDestino.start():
-        origen = cmd[mOrigen.end():mDestino.start()-1]
-        destino = cmd[mDestino.end():]
-    if mDestino.start() < mOrigen.start():
-        destino = cmd[mDestino.end():mOrigen.start()-1]
-        origen = cmd[mOrigen.end():]
-except:
-    print(Fore.RED + "[-] Error de sintaxis")
-    exit()
-
-if re.search("-o[= ]", cmd) and re.search("-d[= ]", cmd):
     # Si el origen es un archivo y el destino es un archivo zip...
     if os.path.isfile(origen) and (destino.endswith(".zip") or destino.endswith(".rar")):
         try:
@@ -52,7 +50,7 @@ if re.search("-o[= ]", cmd) and re.search("-d[= ]", cmd):
             directorio = os.getcwd() # Se obtiene el directorio actual
             with ZipFile(destino, 'w') as zip:
                 for i in archivos:
-                    archivo = f"{directorio}/{i}" # Se obtiene el path del acrhivo
+                    archivo = f"{directorio}/{i}" # Se obtiene el path del archivo
                     if os.path.isfile(archivo):
                         zip.write(archivo, getNombre(archivo)) # Se comprime el arhivo
                         print(Fore.GREEN + f"[+] Archivo \"{i}\" comprimido")
@@ -79,7 +77,7 @@ if re.search("-o[= ]", cmd) and re.search("-d[= ]", cmd):
                     comprimidos += 1
             zip.close()
 
-            print(Fore.GREEN + f"[+] {cont} elementos comprimidos de {cont}")
+            print(Fore.GREEN + f"[+] {comprimidos} elementos comprimidos de {cont}")
 
         except:
             print(Fore.RED + f"[-] Error al comprimir el directorio \"{origen}\"")

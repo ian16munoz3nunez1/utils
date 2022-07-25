@@ -13,41 +13,43 @@ def getNombre(ubicacion):
     nombre = os.path.basename(nombre)
     return nombre
 
+def params(cmd):
+    try:
+        origen = re.findall("-i[= ]([\W\w]+) -o", cmd)[0]
+    except:
+        origen = re.findall("-i[= ]([\W\w]+)", cmd)[0]
+
+    try:
+        destino = re.findall("-o[= ]([\W\w]+) -i", cmd)[0]
+    except:
+        destino = re.findall("-o[= ]([\W\w]+)", cmd)[0]
+
+    return origen, destino
+
 cmd = ''.join(' ' + i for i in sys.argv) # Se obtiene el comando ingresado
 
-# Se revisa si la sintaxis y los parametros son correctos
-try:
-    mOrigen = re.search("-o[= ]", cmd)
-    mDestino = re.search("-d[= ]", cmd)
+if re.search("-i[= ]", cmd) and re.search("-o[= ]", cmd):
+    origen, destino = params(cmd)
 
-    origen = ''
-    destino = ''
-    if mOrigen.start() < mDestino.start():
-        origen = cmd[mOrigen.end():mDestino.start()-1]
-        destino = cmd[mDestino.end():]
-    if mDestino.start() < mOrigen.start():
-        destino = cmd[mDestino.end():mOrigen.start()-1]
-        origen = cmd[mOrigen.end():]
+    # Si el origen es un archivo zip
+    if os.path.isfile(origen) and (origen.endswith(".zip") or origen.endswith(".rar")):
+        # Si el directorio destino no existe se crea
+        if not os.path.isdir(destino):
+            os.mkdir(destino)
 
-except:
-    print(Fore.RED + "[-] Error de sintaxis")
-    exit()
+        descomprimidos = 0
+        with ZipFile(origen, 'r') as zip: # Se crea la instancia del archivo 'origen'
+            for i in zip.namelist():
+                zip.extract(i, destino) # Se descomprime el archivo 'i' en 'destino'
+                print(Fore.GREEN + f"[+] Archivo \"{i}\" descomprimido")
+                descomprimidos += 1
+        zip.close()
 
-# Si el origen es un archivo zip
-if os.path.isfile(origen) and (origen.endswith(".zip") or origen.endswith(".rar")):
-    # Si el directorio destino no existe se crea
-    if not os.path.isdir(destino):
-        os.mkdir(destino)
+        print(f"[+] {descomprimidos} archivos descomprimidos")
 
-    descomprimidos = 0
-    with ZipFile(origen, 'r') as zip: # Se crea la instancia del archivo 'origen'
-        for i in zip.namelist():
-            zip.extract(i, destino) # Se descomprime el archivo 'i' en 'destino'
-            print(Fore.GREEN + f"[+] Archivo \"{i}\" descomprimido")
-            descomprimidos += 1
-    zip.close()
-
-    print(f"[+] {descomprimidos} archivos descomprimidos")
+    else:
+        print(Fore.RED + f"[-] Archivo \"{origen}\" no encontrado")
 
 else:
-    print(Fore.RED + f"[-] Archivo \"{origen}\" no encontrado")
+    print(Fore.RED + "[-] error de sintaxis")
+

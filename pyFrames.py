@@ -32,70 +32,78 @@ def isVideo(ubicacion):
     return video
 
 def filtrar(frame, f):
-    if re.search('90', f):
+    if re.search(r'90', f):
         frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
-    if re.search('180', f):
+    if re.search(r'180', f):
         frame = cv2.rotate(frame, cv2.ROTATE_180)
-    if re.search('270', f):
+    if re.search(r'270', f):
         frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-    if re.search('x', f):
+    if re.search(r'x', f):
         frame = cv2.flip(frame, 0)
-    if re.search('y', f):
+    if re.search(r'y', f):
         frame = cv2.flip(frame, 1)
 
     return frame
 
 def params(cmd):
-    entrada = None
-    salida = None
     video = None
     inicio = None
     fin = None
     filtros = None
 
-    try:
-        entrada = re.findall("-i[= ]([\W\w]+) -[ovseqxy012789]+", cmd)[0]
-    except:
-        entrada = re.findall("-i[= ]([\W\w]+)", cmd)[0]
+    if re.search(r"\s-[qxy012789]+\s?", cmd):
+        m = re.search(r"\s-[qxy012789]+\s?", cmd)
+        if m.end() == len(cmd):
+            filtros = cmd[m.start()+1:m.end()]
+            cmd = re.sub(r"\s-[qxy012789]+", '', cmd)
+        else:
+            filtros = cmd[m.start()+1:m.end()-1]
+            cmd = re.sub(r"\s-[qxy012789]+\s?", ' ', cmd)
 
-    try:
-        salida = re.findall("-o[= ]([\W\w]+) -[ivseqxy012789]+", cmd)[0]
-    except:
-        salida = re.findall("-o[= ]([\W\w]+)", cmd)[0]
+    m = re.split(r"(\s-[iovse]?[= ])", cmd)
+    m.pop(0)
 
-    if re.search("-v[= ]", cmd):
+    params = {}
+
+    i = 0
+    while i < len(m):
+        flag = m[i].replace(' ', '')
+        flag = flag.replace('=', '')
+        params[flag] = m[i+1]
+        i += 2
+
+    if '-i' in params.keys():
+        entrada = params['-i']
+    if '-o' in params.keys():
+        salida = params['-o']
+    if '-v' in params.keys():
+        video = paras['-v']
+    if '-s' in params.keys():
         try:
-            video = re.findall("-v[= ]([\W\w]+) -[ioseqxy012789]+", cmd)[0]
+            inicio = int(params['-s'])
         except:
-            video = re.findall("-v[= ]([\W\w]+)", cmd)[0]
-
-    if re.search("-s[= ]", cmd):
+            pass
+    if '-e' in params.keys():
         try:
-            inicio = int(re.findall("-s[= ]([0-9]+) -[ioveqxy012789]+", cmd)[0])
+            fin = int(params['-e'])
         except:
-            inicio = int(re.findall("-s[= ]([0-9]+)", cmd)[0])
-
-    if re.search("-e[= ]", cmd):
-        try:
-            fin = int(re.findall("-e[= ]([0-9]+) -[iovsqxy012789]+", cmd)[0])
-        except:
-            fin = int(re.findall("-e[= ]([0-9]+)", cmd)[0])
-
-    if re.search("-[qxy012789]+", cmd):
-        try:
-            filtros = re.findall("-([qxy012789]+) -[iovse]+", cmd)[0]
-        except:
-            filtros = re.findall("-([qxy012789]+)", cmd)[0]
+            pass
 
     return entrada, salida, video, inicio, fin, filtros
 
 cmd = ''.join(' ' + i for i in sys.argv)
 
-if re.search("-i[= ]", cmd) and re.search("-o[= ]", cmd):
+if re.search(r"\s-i[= ]", cmd) and re.search(r"\s-o[= ]", cmd):
     entrada, salida, video, inicio, fin, filtros = params(cmd)
+    print(Fore.CYAN + "[*] Entrada:", entrada)
+    print(Fore.CYAN + "[*] Salida:", salida)
+    print(Fore.CYAN + "[*] Video:", video)
+    print(Fore.CYAN + "[*] Inicio:", inicio)
+    print(Fore.CYAN + "[*] Fin:", fin)
+    print(Fore.CYAN + "[*] Filtros:", filtros)
 
     if filtros:
-        quality = re.search("q", filtros)
+        quality = re.search(r"q", filtros)
     else:
         quality = None
     if not quality and video:

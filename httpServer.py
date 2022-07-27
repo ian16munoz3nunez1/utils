@@ -121,25 +121,35 @@ def params(cmd):
     directorio = os.getcwd() + '/'
     show = False
 
-    try:
-        puerto = int(re.findall("-p[= ]([0-9]+) -[ds]+", cmd)[0])
-    except:
-        puerto = int(re.findall("-p[= ]([0-9]+)", cmd)[0])
-
-    if re.search("-d[= ]", cmd):
-        try:
-            directorio += re.findall("-d[= ]([\W\w]+) -[ps]+", cmd)[0]
-        except:
-            directorio += re.findall("-d[= ]([\W\w]+)", cmd)[0]
-
-    if re.search("-s[= ]", cmd):
+    if re.search(r"\s-s\s?", cmd):
         show = True
+        m = re.search(r"\s-s\s?", cmd)
+        if m.end() == len(cmd):
+            cmd = re.sub(r"\s-s", '', cmd)
+        else:
+            cmd = re.sub(r"\s-s\s?", ' ', cmd)
+
+    m = re.split(r"(\s-[dp]?[= ])", cmd)
+    m.pop(0)
+
+    params = {}
+
+    i = 0
+    while i < len(m):
+        flag = m[i].replace(' ', '')
+        flag = flag.replace('=', '')
+        params[flag] = m[i+1]
+        i += 2
+
+    if '-d' in params.keys():
+        directorio += params['-d']
+    puerto = params['-p']
 
     return directorio, puerto, show
 
 cmd = ''.join(' ' + i for i in sys.argv) # Se obtiene el comando ingresado
 
-if re.search("-p[= ]", cmd):
+if re.search(r"\s-p[= ]", cmd):
     directorio, puerto, show = params(cmd)
 
     if os.path.isdir(directorio):
@@ -190,7 +200,7 @@ if re.search("-p[= ]", cmd):
                 }
 
                 .galeria video {
-                    border-radius: 10%;
+                    border-radius: 10px;
                     width: 100%;
                     vertical-align: top;
                     height: 300px;

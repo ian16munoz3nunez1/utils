@@ -30,15 +30,20 @@ def desencriptar(archivos, key):
         print(Fore.GREEN + f"[+] Archivo \"{nombre}\" desencriptado")
 
 def params(cmd):
-    try:
-        clave = re.findall("-k[= ]([\W\w]+) -d", cmd)[0]
-    except:
-        clave = re.findall("-k[= ]([\W\w]+)", cmd)[0]
+    m = re.split(r"(\s-[dk]?[= ])", cmd)
+    m.pop(0)
 
-    try:
-        ubicacion = re.findall("-d[= ]([\W\w]+) -k", cmd)[0]
-    except:
-        ubicacion = re.findall("-d[= ]([\W\w]+)", cmd)[0]
+    params = {}
+
+    i = 0
+    while i < len(m):
+        flag = m[i].replace(' ', '')
+        flag = flag.replace('=', '')
+        params[flag] = m[i+1]
+        i += 2
+
+    ubicacion = params['-d']
+    clave = params['-k']
 
     return clave, ubicacion
 
@@ -46,7 +51,7 @@ def params(cmd):
 cmd = ''.join(' ' + i for i in sys.argv)
 
 # Se revisa si los parametros y la sintaxis son correctos
-if re.search("-k[= ]", cmd) and re.search("-d[= ]", cmd):
+if re.search(r"\s-k[= ]", cmd) and re.search(r"\s-d[= ]", cmd):
     clave, ubicacion = params(cmd)
 
     # Si la ubicacion ingresada es un archivo...

@@ -57,37 +57,37 @@ def params(cmd):
     ext = None
     nombre = None
 
-    try:
-        url = re.findall("-u[= ]([\W\w]+) -[nx]+", cmd)[0]
-    except:
-        url = re.findall("-u[= ]([\W\w]+)", cmd)[0]
+    m = re.split(r"(\s-[nux]?[= ])", cmd)
+    m.pop(0)
 
-    if re.search("-x[= ]", cmd):
-        try:
-            ext = re.findall("-x[= ]([\W\w]+) -[nu]+", cmd)[0]
-        except:
-            ext = re.findall("-x[= ]([\W\w]+)", cmd)[0]
+    params = {}
 
-    if re.search("-n[= ]", cmd):
-        try:
-            nombre = re.findall("-n[= ]([\W\w]+) -[ux]+", cmd)[0]
-        except:
-            nombre = re.findall("-n[= ]([\W\w]+)", cmd)[0]
+    i = 0
+    while i < len(m):
+        flag = m[i].replace(' ', '')
+        flag = flag.replace('=', '')
+        params[flag] = m[i+1]
+        i += 2
+
+    url = params['-u']
+    if '-n' in params.keys():
+        nombre = params['-n']
+    if '-x' in params.keys():
+        ext = params['-x']
 
     return url, ext, nombre
 
 cmd = ''.join(' ' + i for i in sys.argv)
 
-if re.search("-u[= ]", cmd):
+if re.search(r"\s-u[= ]", cmd):
     url, ext, nombre = params(cmd)
-
     valido, extension = getExt(url)
 
-    if re.search("-n[= ]", cmd) and re.search("-x[= ]", cmd):
+    if re.search(r"\s-n[= ]", cmd) and re.search(r"\s-x[= ]", cmd):
         print(Fore.YELLOW + "[!] El nombre y la extension entran en conflicto")
         exit()
 
-    if valido and extension is not None and not re.search("-n[= ]", cmd):
+    if valido and extension is not None and not re.search(r"\s-n[= ]", cmd):
         nombre = wgetNombre(url, extension)
 
         req = requests.get(url)
@@ -97,7 +97,7 @@ if re.search("-u[= ]", cmd):
         archivo.close()
         print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado correctamente")
 
-    elif not valido and extension is None and re.search("-x[= ]", cmd):
+    elif not valido and extension is None and re.search(r"\s-x[= ]", cmd):
         req = requests.get(url)
         soup = BeautifulSoup(req.text, "html.parser")
 
@@ -124,20 +124,22 @@ if re.search("-u[= ]", cmd):
                 archivo.close()
                 print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado")
 
-    elif re.search("-n[= ]", cmd) and nombre is not None:
+    elif re.search(r"\s-n[= ]", cmd) and nombre is not None:
         try:
             req = request.urlopen(url)
 
             with open(nombre, 'wb') as archivo:
                 archivo.write(req.read())
             archivo.close()
-            print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado")
+            print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado correctamente")
 
         except Exception as e:
-            print(e)
+            e = str(e)
+            print(Fore.RED + e)
 
     else:
         print(Fore.RED + "[-] error")
 
 else:
     print(Fore.RED + "[-] error de sintaxis")
+

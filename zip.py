@@ -14,21 +14,26 @@ def getNombre(ubicacion):
     return nombre
 
 def params(cmd):
-    try:
-        origen = re.findall("-i[= ]([\W\w]+) -o", cmd)[0]
-    except:
-        origen = re.findall("-i[= ]([\W\w]+)", cmd)[0]
+    m = re.split(r"(\s-[io]?[= ])", cmd)
+    m.pop(0)
 
-    try:
-        destino = re.findall("-o[= ]([\W\w]+) -i", cmd)[0]
-    except:
-        destino = re.findall("-o[= ]([\W\w]+)", cmd)[0]
+    params = {}
+
+    i = 0
+    while i < len(m):
+        flag = m[i].replace(' ', '')
+        flag = flag.replace('=', '')
+        params[flag] = m[i+1]
+        i += 2
+
+    origen = params['-i']
+    destino = params['-o']
 
     return origen, destino
 
 cmd = ''.join(' ' + i for i in sys.argv) # Se obtiene el comando ingresado
 
-if re.search("-i[= ]", cmd) and re.search("-o[= ]", cmd):
+if re.search(r"\s-i[= ]", cmd) and re.search(r"\s-o[= ]", cmd):
     origen, destino = params(cmd)
 
     # Si el origen es un archivo y el destino es un archivo zip...

@@ -37,24 +37,24 @@ def isImage(ubicacion):
     return imagen
 
 def filtrar(imagen, f):
-    if re.search('90', f):
+    if re.search(r'90', f):
         imagen = cv2.rotate(imagen, cv2.ROTATE_90_COUNTERCLOCKWISE)
-    if re.search('180', f):
+    if re.search(r'180', f):
         imagen = cv2.rotate(imagen, cv2.ROTATE_180)
-    if re.search('270', f):
+    if re.search(r'270', f):
         imagen = cv2.rotate(imagen, cv2.ROTATE_90_CLOCKWISE)
-    if re.search('x', f):
+    if re.search(r'x', f):
         imagen = cv2.flip(imagen, 0)
-    if re.search('y', f):
+    if re.search(r'y', f):
         imagen = cv2.flip(imagen, 1)
-    if re.search('g', f):
+    if re.search(r'g', f):
         imagen = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
-    if re.search('n', f):
+    if re.search(r'n', f):
         imagen = 255 - imagen
-    if re.search('m', f):
+    if re.search(r'm', f):
         flip = cv2.flip(imagen, 1)
         imagen = numpy.hstack((imagen, flip))
-    if re.search('c', f):
+    if re.search(r'c', f):
         grises = cv2.cvtColor(imagen, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(grises, (3,3), 0)
         t1 = int(input("Threshold1: "))
@@ -65,34 +65,43 @@ def filtrar(imagen, f):
     return imagen
 
 def params(cmd):
-    ubicacion = None
     escala = None
     filtros = None
 
-    try:
-        ubicacion = re.findall(r"-i[= ]([\W\w]+) -[txygnmc012789]+", cmd)[0]
-    except:
-        ubicacion = re.findall(r"-i[= ]([\W\w]+)", cmd)[0]
+    if re.search(r"\s-[xygnmc012789]+\s?", cmd):
+        m = re.search(r"\s-[xygnmc012789]+\s?", cmd)
+        if m.end() == len(cmd):
+            filtros = cmd[m.start()+1:m.end()]
+            cmd = re.sub(r"\s-[xygnmc012789]+", '', cmd)
+        else:
+            filtros = cmd[m.start()+1:m.end()-1]
+            cmd = re.sub(r"\s-[xygnmc012789]+\s?", ' ', cmd)
 
-    if re.search("-t[= ]", cmd):
-        try:
-            escala = float(re.findall("-t[= ]([.0-9]+) -[ixygnmc012789]+", cmd)[0])
-        except:
-            escala = float(re.findall("-t[= ]([.0-9]+)", cmd)[0])
+    m = re.split(r"(\s-[it]?[= ])", cmd)
+    m.pop(0)
 
-    if re.search("-[xygnmc012789]+", cmd):
+    params = {}
+
+    i = 0
+    while i < len(m):
+        flag = m[i].replace(' ', '')
+        flag = flag.replace('=', '')
+        params[flag] = m[i+1]
+        i += 2
+
+    ubicacion = params['-i']
+    if '-t' in params.keys():
         try:
-            filtros = re.findall("-([xygnmc012789]+) -[it]+", cmd)[0]
+            escala = float(params['-t'])
         except:
-            filtros = re.findall("-([xygnmc012789]+)", cmd)[0]
+            pass
 
     return ubicacion, escala, filtros
 
 cmd = ''.join(' ' + i for i in sys.argv)
 
-if re.search("-i[= ]", cmd):
+if re.search(r"\s-i[= ]", cmd):
     ubicacion, escala, filtros = params(cmd)
-    print(filtros)
 
     if os.path.isdir(ubicacion):
         archivos = []

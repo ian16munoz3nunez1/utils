@@ -64,7 +64,7 @@ def filtrar(imagen, f):
 
     return imagen
 
-def params(cmd):
+def parametros(cmd):
     escala = None
     filtros = None
 
@@ -77,7 +77,7 @@ def params(cmd):
             filtros = cmd[m.start()+1:m.end()-1]
             cmd = re.sub(r"\s-[xygnmc012789]+\s?", ' ', cmd)
 
-    m = re.split(r"(\s-[it]?[= ])", cmd)
+    m = re.split(r"(\s-[it]+[= ])", cmd)
     m.pop(0)
 
     params = {}
@@ -101,7 +101,7 @@ def params(cmd):
 cmd = ''.join(' ' + i for i in sys.argv)
 
 if re.search(r"\s-i[= ]", cmd):
-    ubicacion, escala, filtros = params(cmd)
+    ubicacion, escala, filtros = parametros(cmd)
 
     if os.path.isdir(ubicacion):
         archivos = []

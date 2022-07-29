@@ -13,8 +13,8 @@ def getNombre(ubicacion):
     nombre = os.path.basename(nombre)
     return nombre
 
-def params(cmd):
-    m = re.split(r"(\s-[io]?[= ])", cmd)
+def parametros(cmd):
+    m = re.split(r"(\s-[io]+[= ])", cmd)
     m.pop(0)
 
     params = {}
@@ -27,17 +27,22 @@ def params(cmd):
         i += 2
 
     origen = params['-i']
-    destino = params['-o']
+    if '-o' in params.keys():
+        destino = params['-o']
+    else:
+        destino = None
 
     return origen, destino
 
 cmd = ''.join(' ' + i for i in sys.argv) # Se obtiene el comando ingresado
 
-if re.search(r"\s-i[= ]", cmd) and re.search(r"\s-o[= ]", cmd):
-    origen, destino = params(cmd)
+if re.search(r"\s-i[= ]", cmd):
+    origen, destino = parametros(cmd)
 
     # Si el origen es un archivo zip
-    if os.path.isfile(origen) and (origen.endswith(".zip") or origen.endswith(".rar")):
+    if os.path.isfile(origen):
+        if not re.search(r"\s-o[= ]", cmd):
+            destino = getNombre(origen).replace(".zip", '')
         # Si el directorio destino no existe se crea
         if not os.path.isdir(destino):
             os.mkdir(destino)

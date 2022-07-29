@@ -13,8 +13,8 @@ def getNombre(ubicacion):
     nombre = os.path.basename(nombre)
     return nombre
 
-def params(cmd):
-    m = re.split(r"(\s-[io]?[= ])", cmd)
+def parametros(cmd):
+    m = re.split(r"(\s-[io]+[= ])", cmd)
     m.pop(0)
 
     params = {}
@@ -27,18 +27,23 @@ def params(cmd):
         i += 2
 
     origen = params['-i']
-    destino = params['-o']
+    if '-o' in params.keys():
+        destino = params['-o']
+    else:
+        destino = None
 
     return origen, destino
 
 cmd = ''.join(' ' + i for i in sys.argv) # Se obtiene el comando ingresado
 
-if re.search(r"\s-i[= ]", cmd) and re.search(r"\s-o[= ]", cmd):
-    origen, destino = params(cmd)
+if re.search(r"\s-i[= ]", cmd):
+    origen, destino = parametros(cmd)
 
     # Si el origen es un archivo y el destino es un archivo zip...
-    if os.path.isfile(origen) and (destino.endswith(".zip") or destino.endswith(".rar")):
+    if os.path.isfile(origen):
         try:
+            if not re.search(r"\s-o[= ]", cmd):
+                destino = getNombre(origen) + ".zip"
             # Se comprime el archivo
             with ZipFile(destino, 'w') as zip:
                 zip.write(origen, getNombre(origen))
@@ -49,8 +54,8 @@ if re.search(r"\s-i[= ]", cmd) and re.search(r"\s-o[= ]", cmd):
             print(Fore.RED + f"[-] Error al comprimir el archivo \"{origen}\"")
 
     # Si el origen contiene '/', no es un directorio y el destino es un archivo zip...
-    elif re.search('/', origen) and not os.path.isdir(origen) and (destino.endswith(".zip") or destino.endswith(".rar")):
-        try:
+    elif re.search('/', origen) and not os.path.isdir(origen):
+        if re.search(r"\s-o[= ]", cmd):
             archivos = origen.split('/') # Se crea un arreglo de archivos
             directorio = os.getcwd() # Se obtiene el directorio actual
             with ZipFile(destino, 'w') as zip:
@@ -61,11 +66,13 @@ if re.search(r"\s-i[= ]", cmd) and re.search(r"\s-o[= ]", cmd):
                         print(Fore.GREEN + f"[+] Archivo \"{i}\" comprimido")
             zip.close()
 
-        except:
-            print(Fore.RED + f"[-] Error al comprimir los archivos")
+        else:
+            print(Fore.RED + "[-] error: Falta del parametro destino (-o)")
 
-    elif os.path.isdir(origen) and (destino.endswith(".zip") or destino.endswith(".rar")):
+    elif os.path.isdir(origen):
         try:
+            if not re.search(r"\s-o[= ]", cmd):
+                destino = getNombre(origen) + ".zip" # Se obtiene el destino de escritura
             cont = len(os.listdir(origen)) # Se obtiene el numero de elementos del directorio
             # Se crea una lista de archivos
             archivos = []

@@ -29,8 +29,8 @@ def desencriptar(archivos, key):
 
         print(Fore.GREEN + f"[+] Archivo \"{nombre}\" desencriptado")
 
-def params(cmd):
-    m = re.split(r"(\s-[dk]?[= ])", cmd)
+def parametros(cmd):
+    m = re.split(r"(\s-[dk]+[= ])", cmd)
     m.pop(0)
 
     params = {}
@@ -52,7 +52,7 @@ cmd = ''.join(' ' + i for i in sys.argv)
 
 # Se revisa si los parametros y la sintaxis son correctos
 if re.search(r"\s-k[= ]", cmd) and re.search(r"\s-d[= ]", cmd):
-    clave, ubicacion = params(cmd)
+    clave, ubicacion = parametros(cmd)
 
     # Si la ubicacion ingresada es un archivo...
     if os.path.isfile(ubicacion) and clave.endswith(".key"):

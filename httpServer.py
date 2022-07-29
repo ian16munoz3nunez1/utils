@@ -117,7 +117,7 @@ def isAudio(ubicacion):
         i += 1
     return audio
 
-def params(cmd):
+def parametros(cmd):
     directorio = os.getcwd() + '/'
     show = False
 
@@ -129,7 +129,7 @@ def params(cmd):
         else:
             cmd = re.sub(r"\s-s\s?", ' ', cmd)
 
-    m = re.split(r"(\s-[dp]?[= ])", cmd)
+    m = re.split(r"(\s-[dp]+[= ])", cmd)
     m.pop(0)
 
     params = {}
@@ -150,7 +150,7 @@ def params(cmd):
 cmd = ''.join(' ' + i for i in sys.argv) # Se obtiene el comando ingresado
 
 if re.search(r"\s-p[= ]", cmd):
-    directorio, puerto, show = params(cmd)
+    directorio, puerto, show = parametros(cmd)
 
     if os.path.isdir(directorio):
         # Se inicia la aplicacion Flask

@@ -53,11 +53,11 @@ def getArchivos(soup, ext):
 
     return archivos
 
-def params(cmd):
+def parametros(cmd):
     ext = None
     nombre = None
 
-    m = re.split(r"(\s-[nux]?[= ])", cmd)
+    m = re.split(r"(\s-[nux]+[= ])", cmd)
     m.pop(0)
 
     params = {}
@@ -80,7 +80,7 @@ def params(cmd):
 cmd = ''.join(' ' + i for i in sys.argv)
 
 if re.search(r"\s-u[= ]", cmd):
-    url, ext, nombre = params(cmd)
+    url, ext, nombre = parametros(cmd)
     valido, extension = getExt(url)
 
     if re.search(r"\s-n[= ]", cmd) and re.search(r"\s-x[= ]", cmd):

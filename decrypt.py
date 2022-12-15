@@ -7,14 +7,19 @@ from colorama.ansi import Fore
 
 init(autoreset=True)
 
-# 'cargarClave' carga la llave del archivo de encriptacion
+# La funcion 'manual' muestra una ayuda para el usuario
+def manual():
+    print(Fore.YELLOW + "* -i" + Fore.RED + " --> " + Fore.WHITE + "Especifica el archivo o directorio a desencriptar")
+    print(Fore.YELLOW + "* -k" + Fore.RED + " --> " + Fore.WHITE + "Especifica el nombre de la clave de encriptacion")
+
+# La funcion 'cargarClave' carga la clave del archivo de encriptacion
 def cargarClave(clave):
     return open(clave, 'rb').read()
 
-# 'desencriptar' desencripta el arreglo de archivos 'archivos' con la llave 'key'
+# La funcion 'desencriptar' desencripta el arreglo de archivos 'archivos' con la clave 'key'
 def desencriptar(archivos, key):
     f = Fernet(key)
-
+    cont = 0
     for i in archivos:
         nombre = os.path.basename(i)
         with open(i, 'rb') as archivo:
@@ -28,9 +33,13 @@ def desencriptar(archivos, key):
         archivo.close()
 
         print(Fore.GREEN + f"[+] Archivo \"{nombre}\" desencriptado")
+        cont += 1
 
+    print(Fore.GREEN + f"[+] {cont} archivos desencriptados")
+
+# La funcion 'parametros' regresa los parametros ingresados por el usuario
 def parametros(cmd):
-    m = re.split(r"(\s-[dk]+[= ])", cmd)
+    m = re.split(r"(\s-[ik]+[= ])", cmd)
     m.pop(0)
 
     params = {}
@@ -42,7 +51,7 @@ def parametros(cmd):
         params[flag] = m[i+1]
         i += 2
 
-    ubicacion = params['-d']
+    ubicacion = params['-i']
     clave = params['-k']
 
     return clave, ubicacion
@@ -50,57 +59,71 @@ def parametros(cmd):
 # Se obtiene el comando ingresado
 cmd = ''.join(' ' + i for i in sys.argv)
 
-# Se revisa si los parametros y la sintaxis son correctos
-if re.search(r"\s-k[= ]", cmd) and re.search(r"\s-d[= ]", cmd):
-    clave, ubicacion = parametros(cmd)
+# Si se encuentra la bandera -h o --help se muestra ayuda para el usuario
+if re.search(r"\s-+h\s?", cmd) or re.search(r"\s--help\s?", cmd):
+    manual()
+    exit()
 
-    # Si la ubicacion ingresada es un archivo...
-    if os.path.isfile(ubicacion) and clave.endswith(".key"):
-        if os.path.isfile(clave):
-            print(Fore.YELLOW + f"[!] Segur@ que quieres desencriptar el archivo \"{ubicacion}\"?...\n[S/n]", end=' ')
-            res = input() # Se espera una respuesta
+# Se revisa que la bandera -i se encuentre en el comando
+if not re.search(r"\s-i[= ]", cmd):
+    print(Fore.RED + "[-] Ubicacion del archivo o directorio no ingresada")
+    exit()
 
-            if len(res) == 0 or res.upper() == 'S' or res.upper()[0] == 'S':
-                key = cargarClave(clave) # Se carga la llave
-                desencriptar([ubicacion], key) # Se encripta el archivo
+# Se revisa que la bandera -k se encuentre en el comando
+if not re.search(r"\s-k[= ]", cmd):
+    print(Fore.RED + "[-] Nombre de la clave de encriptacion no ingresado")
+    exit()
 
-                os.remove(clave) # Se elimina la llave ingresada
-                print(Fore.YELLOW + f"[!] Clave \"{clave}\" eliminada")
-            else:
-                print(Fore.YELLOW + "[!] Desencriptacion cancelada")
+clave, ubicacion = parametros(cmd)
 
-        else:
-            print(Fore.RED + f"[-] Error al encontrar la clave \"{clave}\"")
-            print(Fore.YELLOW + "[!] Desencriptacion cancelada")
+# Si la clave no tiene la extension '.key' se agrega
+if not clave.endswith(".key"):
+    clave += ".key"
 
-    # Si la ubicacion ingresada es un directorio...
-    elif os.path.isdir(ubicacion) and clave.endswith(".key"):
-        if os.path.isfile(clave):
-            print(Fore.YELLOW + f"[!] Segur@ que quieres usar la clave \"{clave}\"?...\n[S/n]", end=' ')
-            res = input() # Se espera una respuesta
+if not os.path.isfile(clave):
+    print(Fore.RED + f"[-] Error al encontrar la clave \"{clave}\"")
+    print(Fore.YELLOW + "[!] Desencriptacion cancelada")
+    exit()
 
-            if len(res) == 0 or res.upper() == 'S' or res.upper()[0] == 'S':
-                key = cargarClave(clave) # Se carga la llave
+print(Fore.GREEN + f"[+] Clave \"{clave}\" encontrada")
 
-                # Se crea una lista de archivos
-                archivos = []
-                for i in os.listdir(ubicacion):
-                    archivo = f"{ubicacion}/{i}"
-                    if os.path.isfile(archivo) and not i.endswith(".key"):
-                        archivos.append(archivo)
+# Si la ubicacion ingresada es un archivo...
+if os.path.isfile(ubicacion):
+    print(Fore.YELLOW + f"[!] Segur@ que quieres desencriptar el archivo \"{ubicacion}\"?...\n[S/n]", end=' ')
+    res = input()
 
-                desencriptar(archivos, key) # Se desencriptan los archivos
+    if len(res) == 0 or res.upper() == 'S' or res.upper()[0] == 'S':
+        key = cargarClave(clave) # Se carga la clave
+        desencriptar([ubicacion], key) # Se desencripta el archivo
 
-                os.remove(clave) # Se elimina la llave ingresada
-                print(Fore.YELLOW + f"[!] Clave \"{clave}\" eliminada")
+        os.remove(clave) # Se elimina la clave ingresada
+        print(Fore.YELLOW + f"[!] Clave \"{clave}\" eliminada")
+    else:
+        print(Fore.YELLOW + "[!] Desencriptacion cancelada")
 
-            else:
-                print(Fore.YELLOW + "[!] Desencriptacion cancelada")
-        else:
-            print(Fore.RED + f"[-] Error al encontrar la clave \"{clave}\"")
+# Si la ubicacion ingresada es un directorio...
+elif os.path.isdir(ubicacion):
+    print(Fore.YELLOW + f"[!] Segur@ que quieres desencriptar el directorio \"{ubicacion}\"?...\n[S/n]", end=' ')
+    res = input()
+
+    if len(res) == 0 or res.upper() == 'S' or res.upper()[0] == 'S':
+        key = cargarClave(clave) # Se carga la clave
+
+        # Se crea una lista de archivos
+        archivos = []
+        for i in os.listdir(ubicacion):
+            archivo = f"{ubicacion}/{i}"
+            if os.path.isfile(archivo) and not i.endswith(".key"):
+                archivos.append(archivo)
+
+        desencriptar(archivos, key) # Se desencriptan los archivos
+
+        os.remove(clave) # Se elimina la clave ingresada
+        print(Fore.YELLOW + f"[!] Clave \"{clave}\" eliminada")
 
     else:
-        print(Fore.RED + f"[-] Error al encontrar la ubicacion \"{ubicacion}\"")
+        print(Fore.YELLOW + "[!] Desencriptacion cancelada")
+
 else:
-    print(Fore.RED + "[-] error de sintaxis")
+    print(Fore.RED + f"[-] Error al encontrar la ubicacion \"{ubicacion}\"")
 

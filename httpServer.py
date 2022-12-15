@@ -7,13 +7,19 @@ from colorama.ansi import Fore
 
 init(autoreset=True)
 
-# 'getNombre' regresa el nombre de un archivo o directorio
+# La funcion 'manual' muestra una ayuda para el usuario
+def manual():
+    print(Fore.YELLOW + "* -p" + Fore.RED + " --> " + Fore.WHITE + "Especifica el puerto de conexion para el servidor")
+    print(Fore.GREEN + "+ -d" + Fore.RED + " --> " + Fore.WHITE + "Comparte un directorio distinto al actual")
+    print(Fore.GREEN + "+ -s" + Fore.RED + " --> " + Fore.WHITE + "Muestra de forma grafica los elementos")
+
+# La funcion 'getNombre' regresa el nombre de un archivo o directorio
 def getNombre(ubicacion):
     nombre = os.path.abspath(ubicacion)
     nombre = os.path.basename(nombre)
     return nombre
 
-# 'getResponseFiel' regresa etiquetas html dependiendo de la ubicacion recibida
+# La funcion 'getResponseFile' regresa etiquetas html dependiendo de la ubicacion recibida
 def getResponseFile(ubicacion):
     href = ubicacion.replace(' ', '%20')
     if isImage(ubicacion): # Regresa una etiqueta html de imagen
@@ -117,6 +123,7 @@ def isAudio(ubicacion):
         i += 1
     return audio
 
+# La funcion 'parametros' regresa los parametros ingresados por el usuario
 def parametros(cmd):
     directorio = os.getcwd() + '/'
     show = False
@@ -149,123 +156,131 @@ def parametros(cmd):
 
 cmd = ''.join(' ' + i for i in sys.argv) # Se obtiene el comando ingresado
 
-if re.search(r"\s-p[= ]", cmd):
-    directorio, puerto, show = parametros(cmd)
+if re.search(r"\s-+h\s?", cmd) or re.search(r"\s--help\s?", cmd):
+    manual()
+    exit()
 
-    if os.path.isdir(directorio):
-        # Se inicia la aplicacion Flask
-        app = Flask(__name__,
-                    static_url_path='',
-                    static_folder='.')
+# Se revisa que la bandera -p se encuentre en el comando
+if not re.search(r"\s-p[= ]", cmd):
+    print(Fore.RED + "[-] Puerto de conexion no ingresado")
+    exit()
 
-        @app.route("/")
-        def principal():
-            nombre = getNombre(directorio) # Se obtiene el nombre del directorio
-            tam = len(os.listdir(directorio)) # Se obtiene el numero de archivos del directorio
-            # Se crea una 'response' html para regresar al cliente
-            response = "<head>"
-            response += f"<title> {nombre} - {tam} elementos </title>"
-            response += f"<meta charset=\"utf-8\">"
-            response += """<style>
-                * {
-                    box-sizing: border-box;
-                    margin: 0;
-                    padding: 0;
-                }
+directorio, puerto, show = parametros(cmd)
 
-                body {
-                    background-color: rgb(100, 100, 100);
-                }
+# Se revisa que el directorio ingresado sea valido
+if not os.path.isdir(directorio):
+    print(Fore.RED + f"[-] Directorio \"{directorio}\" no encontrado")
+    exit()
 
-                .galeria {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    width: 95%;
-                    margin: auto;
-                    row-gap: 10px;
-                    column-gap: 10px;
-                    padding: 40px 0;
-                    overflow: hidden;
-                }
+# Se inicia la aplicacion Flask
+app = Flask(__name__,
+            static_url_path='',
+            static_folder='.')
 
-                .galeria img {
-                    border-radius: 10%;
-                    width: 100%;
-                    vertical-align: top;
-                    height: 300px;
-                    object-fit: cover;
-                    display: block;
-                    position: relative;
-                    overflow: hidden;
-                }
+@app.route("/")
+def principal():
+    nombre = getNombre(directorio) # Se obtiene el nombre del directorio
+    tam = len(os.listdir(directorio)) # Se obtiene el numero de archivos del directorio
 
-                .galeria video {
-                    border-radius: 10px;
-                    width: 100%;
-                    vertical-align: top;
-                    height: 300px;
-                    object-fit: cover;
-                    display: block;
-                    position: relative;
-                    overflow: hidden;
-                }
+    # Se crea una 'response' html para regresar al cliente
+    response = "<head>"
+    response += f"<title> {nombre} - {tam} elementos </title>"
+    response += f"<meta charset=\"utf-8\">"
+    response += """<style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-                .galeria audio {
-                    border-radius: 10%;
-                    width: 100%;
-                    vertical-align: top;
-                    height: 300px;
-                    object-fit: cover;
-                    display: block;
-                    position: relative;
-                    overflow: hidden;
-                }
+        body {
+            background-color: rgb(100, 100, 100);
+        }
+
+        .galeria {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            width: 95%;
+            margin: auto;
+            row-gap: 10px;
+            column-gap: 10px;
+            padding: 40px 0;
+            overflow: hidden;
+        }
+
+        .galeria img {
+            border-radius: 10%;
+            width: 100%;
+            vertical-align: top;
+            height: 300px;
+            object-fit: cover;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .galeria video {
+            border-radius: 10px;
+            width: 100%;
+            vertical-align: top;
+            height: 300px;
+            object-fit: cover;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .galeria audio {
+            border-radius: 10%;
+            width: 100%;
+            vertical-align: top;
+            height: 300px;
+            object-fit: cover;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
 
 
-                .galeria a img {
-                    border-radius: 10%;
-                    width: 100%;
-                    vertical-align: top;
-                    height: 300px;
-                    object-fit: cover;
-                    display: block;
-                    position: relative;
-                    overflow: hidden;
-                }
-            </style>"""
-            response += "</head>"
-            response += f"<h1> {nombre} - {tam} elementos </h1> <hr>"
-            if show:
-                response += "<section class=\"galeria\">"
-                for i in os.listdir(directorio):
-                    response += getResponseFile(i) # Se agrega a la 'response' una etiqueta dependiendo del archivo
-                response += "</section>"
+        .galeria a img {
+            border-radius: 10%;
+            width: 100%;
+            vertical-align: top;
+            height: 300px;
+            object-fit: cover;
+            display: block;
+            position: relative;
+            overflow: hidden;
+        }
+    </style>"""
+    response += "</head>"
+    response += f"<h1> {nombre} - {tam} elementos </h1> <hr>" # Se agrega a la 'response' el contenido de la pagina
+    if show: # Si el usuario quiere mostrar graficamente los elementos...
+        response += "<section class=\"galeria\">"
+        for i in os.listdir(directorio):
+            response += getResponseFile(i) # Se agrega a la 'response' una etiqueta dependiendo del archivo
+        response += "</section>" # Termina el cuerpo de la 'response'
 
+    else: # Si el usuario quiere los enlaces a los archivos
+        response += f"<ul>"
+        for i in os.listdir(directorio):
+            # Se agrega a la 'response' un href con el nombre del archivo o directorio
+            href = i.replace(' ', "%20")
+            if os.path.isdir(f"{directorio}/{i}"):
+                response += f"<li> <a href={href}> {i}/ </a> </li>"
             else:
-                response += f"<ul>"
-                for i in os.listdir(directorio):
-                    # Se agrega a la 'response' un href con el nombre del archivo o directorio
-                    href = i.replace(' ', "%20")
-                    if os.path.isdir(f"{directorio}/{i}"):
-                        response += f"<li> <a href={href}> {i}/ </a> </li>"
-                    else:
-                        response += f"<li> <a href={href}> {i} </a> </li>"
-                response += "</ul>"
+                response += f"<li> <a href={href}> {i} </a> </li>"
+        response += "</ul>" # Termina el cuerpo de la 'response'
 
-            return response # Se regresa la response
+    return response # Se regresa la 'response'
 
-        @app.route("/<string:file>")
-        def archivo(file):
-            # Se regresa un archivo al cliente
-            try:
-                return send_from_directory(directorio, path=file, as_attachment=False)
-            except:
-                return send_from_directory(directorio, filename=file, as_attachment=False)
+@app.route("/<string:file>") # Si se da click al enlace de un archivo, se regresa el contenido de esta
+def archivo(file):
+    # Se regresa un archivo al cliente
+    try:
+        return send_from_directory(directorio, path=file, as_attachment=False)
+    except:
+        return send_from_directory(directorio, filename=file, as_attachment=False)
 
-        app.run(host="0.0.0.0", port=puerto, debug=True) # Se corre la aplicacion Flask
+app.run(host="0.0.0.0", port=puerto, debug=True) # Se corre la aplicacion Flask
 
-    else:
-        print(Fore.YELLOW + f"[!] Directorio \"{directorio}\" no encontrado")
-
-else:
-    print(Fore.RED + "[-] error de sintaxis")

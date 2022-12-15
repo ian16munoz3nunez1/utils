@@ -8,11 +8,19 @@ from colorama.ansi import Fore
 
 init(autoreset=True)
 
+# La funcion 'manual' muestra ayuda para el usuario
+def manual():
+    print(Fore.YELLOW + "* -u" + Fore.RED + " --> " + Fore.WHITE + "Especifica la URL del archivo a descargar")
+    print(Fore.GREEN + "+ -n" + Fore.RED + " --> " + Fore.WHITE + "Especifica el nombre con el que se quiere nombrar el archivo a descargar")
+    print(Fore.GREEN + "+ -x" + Fore.RED + " --> " + Fore.WHITE + "Si se quieren los archivos de una pagina, espeficia el tipo de archivos que se quieren descargar")
+
+# La funcion 'wgetNombre' regresa el nombre de una URL para nombrar el archivo a descargar
 def wgetNombre(url, extension):
     nombre = re.findall(f"/([a-zA-Z0-9_ ].+[.]{extension})", url)[0]
     nombre = nombre.split('/')[-1]
     return nombre
 
+# La funcion 'getExt' regresa si la URL es valida y la extension del archivo de esta URL
 def getExt(url):
     extensiones = ["jpg", "png", "jpeg", "svg", "webp", "mp4", "avi", "mkv",
         "html", "css", "txt", "dat", "py", "java", "c", "cpp", "js", "ino",
@@ -36,6 +44,8 @@ def getExt(url):
 
     return valido, extension
 
+# Si se quieren descargar los archivos de una pagina, la funcion 'getArchivos' regresa
+# una lista de los archivos de esta
 def getArchivos(soup, ext):
     if ext == '*':
         archivos = []
@@ -53,6 +63,7 @@ def getArchivos(soup, ext):
 
     return archivos
 
+# La funcion 'parametros' regresa los parametros ingresados por el usuario
 def parametros(cmd):
     ext = None
     nombre = None
@@ -79,29 +90,41 @@ def parametros(cmd):
 
 cmd = ''.join(' ' + i for i in sys.argv)
 
-if re.search(r"\s-u[= ]", cmd):
-    url, ext, nombre = parametros(cmd)
-    valido, extension = getExt(url)
+# Si se encuentra la bandera -h o --help se muestra ayuda para el usuario
+if re.search(r"\s-+h\s?", cmd) or re.search(r"\s--help\s?", cmd):
+    manual()
+    exit()
 
-    if re.search(r"\s-n[= ]", cmd) and re.search(r"\s-x[= ]", cmd):
-        print(Fore.YELLOW + "[!] El nombre y la extension entran en conflicto")
-        exit()
+# Revisa que la bandera -u se encuentre en el comando
+if not re.search(r"\s-u[= ]", cmd):
+    print(Fore.RED + "[-] Direccion URL no ingresada")
+    exit()
 
-    if valido and extension is not None and not re.search(r"\s-n[= ]", cmd):
-        nombre = wgetNombre(url, extension)
+url, ext, nombre = parametros(cmd) # Se obtienen los parametros ingresados por el usuario
 
-        req = requests.get(url)
+# Revisa 
+if re.search(r"\s-n[= ]", cmd) and re.search(r"\s-x[= ]", cmd):
+    print(Fore.YELLOW + "[!] Los parametros -n y -x entran en conflicto")
+    exit()
 
-        with open(nombre, 'wb') as archivo:
-            archivo.write(req.content)
-        archivo.close()
-        print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado correctamente")
+if not re.search(r"\s-n[= ]", cmd) and not re.search(r"\s-x[= ]", cmd):
+    extension = getExt(url)[1]
+    nombre = wgetNombre(url, extension)
 
-    elif not valido and extension is None and re.search(r"\s-x[= ]", cmd):
+    req = requests.get(url)
+
+    with open(nombre, 'wb') as archivo:
+        archivo.write(req.content)
+    archivo.close()
+    print(Fore.GREEN + f"[+] Archivo \"{nombre}\" descargado correctamente")
+
+elif re.search(r"\s-x[= ]", cmd):
+    try:
         req = requests.get(url)
         soup = BeautifulSoup(req.text, "html.parser")
 
         archivos = getArchivos(soup, ext)
+        cont = 0
         for i in archivos:
             try:
                 if ext == 'a':
@@ -116,30 +139,32 @@ if re.search(r"\s-u[= ]", cmd):
                     link = url + i.get("src")
                 contenido = requests.get(link)
 
-            extension = getExt(link)[1]
-            if extension is not None:
-                nombre = wgetNombre(link, extension)
-                with open(nombre, 'wb') as archivo:
-                    archivo.write(contenido.content)
-                archivo.close()
-                print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado")
-
-    elif re.search(r"\s-n[= ]", cmd) and nombre is not None:
-        try:
-            req = request.urlopen(url)
-
+            nombre = link.split('/')[-1]
             with open(nombre, 'wb') as archivo:
-                archivo.write(req.read())
+                archivo.write(contenido.content)
             archivo.close()
-            print(Fore.GREEN + f"[+] Archivo \"{nombre}\" creado correctamente")
+            print(Fore.GREEN + f"[+] Link \"{link}\" descargado correctamente")
+            cont += 1
 
-        except Exception as e:
-            e = str(e)
-            print(Fore.RED + e)
+        print(Fore.GREEN + f"[+] {cont} archivos descargados")
 
-    else:
-        print(Fore.RED + "[-] error")
+    except Exception as e:
+        e = str(e)
+        print(Fore.RED + e)
+
+elif re.search(r"\s-n[= ]", cmd):
+    try:
+        req = request.urlopen(url)
+
+        with open(nombre, 'wb') as archivo:
+            archivo.write(req.read())
+        archivo.close()
+        print(Fore.GREEN + f"[+] Archivo \"{nombre}\" descargado correctamente")
+
+    except Exception as e:
+        e = str(e)
+        print(Fore.RED + e)
 
 else:
-    print(Fore.RED + "[-] error de sintaxis")
+    print(Fore.RED + "[-] error")
 

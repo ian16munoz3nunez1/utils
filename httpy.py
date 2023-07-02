@@ -140,7 +140,6 @@ def parametros(cmd):
     m.pop(0)
 
     params = {}
-
     i = 0
     while i < len(m):
         flag = m[i].replace(' ', '')
@@ -177,8 +176,8 @@ app = Flask(__name__,
             static_url_path='',
             static_folder='.')
 
-@app.route("/")
-def principal():
+@app.route('/')
+def main():
     nombre = getNombre(directorio) # Se obtiene el nombre del directorio
     tam = len(os.listdir(directorio)) # Se obtiene el numero de archivos del directorio
 
@@ -257,13 +256,17 @@ def principal():
     response += f"<h1> {nombre} - {tam} elementos </h1> <hr>" # Se agrega a la 'response' el contenido de la pagina
     if show: # Si el usuario quiere mostrar graficamente los elementos...
         response += "<section class=\"galeria\">"
-        for i in os.listdir(directorio):
+        archivos = os.listdir(directorio)
+        archivos.sort(key=str.lower)
+        for i in archivos:
             response += getResponseFile(i) # Se agrega a la 'response' una etiqueta dependiendo del archivo
         response += "</section>" # Termina el cuerpo de la 'response'
 
     else: # Si el usuario quiere los enlaces a los archivos
         response += f"<ul>"
-        for i in os.listdir(directorio):
+        archivos = os.listdir(directorio)
+        archivos.sort(key=str.lower)
+        for i in archivos:
             # Se agrega a la 'response' un href con el nombre del archivo o directorio
             href = i.replace(' ', "%20")
             if os.path.isdir(f"{directorio}/{i}"):
@@ -277,10 +280,7 @@ def principal():
 @app.route("/<string:file>") # Si se da click al enlace de un archivo, se regresa el contenido de esta
 def archivo(file):
     # Se regresa un archivo al cliente
-    try:
-        return send_from_directory(directorio, path=file, as_attachment=False)
-    except:
-        return send_from_directory(directorio, filename=file, as_attachment=False)
+    return send_from_directory(directorio, path=file, as_attachment=False)
 
 app.run(host="0.0.0.0", port=puerto, debug=True) # Se corre la aplicacion Flask
 

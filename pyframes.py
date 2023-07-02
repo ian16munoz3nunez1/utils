@@ -30,8 +30,13 @@ def manual():
 
 # La funcion 'escalar' obtiene la imagen para adaptar la imagen a la pantalla
 def escalar(height, width):
-    escala = (height+width)/2
-    escala = 700/escala
+    if height < width:
+        escala = 600/height
+    elif width > height:
+        escala = 600/width
+    else:
+        escala = (height+width)/2
+        escala = 600/escala
 
     return escala
 
@@ -46,7 +51,7 @@ def isVideo(ubicacion):
         if ubicacion.endswith(ext[i]):
             video = True
             break
-        if ubicacion.endswith(exUpper[i]):
+        if ubicacion.endswith(extUpper[i]):
             video = True
             break
         i += 1
@@ -112,7 +117,6 @@ def filtrar(frame, f, t1=None, t2=None, v=None, back=None, dil=None, col=None):
         invertBlur = cv2.bitwise_not(blur)
         frame = cv2.divide(gray, invertBlur, scale=256.0)
 
-
     return frame
 
 # La funcion 'parametros' regresa los parametros ingresados por el usuario
@@ -121,6 +125,7 @@ def parametros(cmd):
     fin = None
     filtros = None
 
+    # Se encuentran las banderas de filtros en el comando y se eliminan
     if re.search(r"\s-[qxygnmchk012789]+\s?", cmd):
         m = re.search(r"\s-[qxygnmchk012789]+\s?", cmd)
         if m.end() == len(cmd):
@@ -130,11 +135,12 @@ def parametros(cmd):
             filtros = cmd[m.start()+1:m.end()-1]
             cmd = re.sub(r"\s-[qxygnmchk012789]+\s?", ' ', cmd)
 
+    # Se separan las banderas con parametros en un arreglo
     m = re.split(r"(\s-[iose]+[= ])", cmd)
     m.pop(0)
 
+    # Se hace un diccionario con las banderas y valores del arreglo antes creado
     params = {}
-
     i = 0
     while i < len(m):
         flag = m[i].replace(' ', '')
@@ -142,10 +148,8 @@ def parametros(cmd):
         params[flag] = m[i+1]
         i += 2
 
-    if '-i' in params.keys():
-        entrada = params['-i']
-    if '-o' in params.keys():
-        salida = params['-o']
+    entrada = params['-i']
+    salida = params['-o']
     if '-s' in params.keys():
         try:
             inicio = int(params['-s'])
@@ -178,29 +182,28 @@ if not re.search(r"\s-o[= ]", cmd):
 
 # Se obtienen los parametros ingresados y se muestran los datos obtenidos de estos
 entrada, salida, inicio, fin, filtros = parametros(cmd)
+
+# Se revisa si la ubicacion ingresada es un video
+if os.path.isfile(entrada) and not isVideo(entrada):
+    print(Fore.RED + f"[-] Video \"{entrada}\" no encontrado o no es compatible")
+    exit()
+
+# Si la entrada es igual a la salida se cancela el proceso
+if salida == entrada:
+    print(Fore.YELLOW + "[!] La salida es igual a la entrada\nPueden sobreescribirse los datos...")
+    exit()
+
 print(Fore.CYAN + "[*] Entrada:", entrada)
 print(Fore.CYAN + "[*] Salida:", salida)
 print(Fore.CYAN + "[*] Inicio:", inicio)
 print(Fore.CYAN + "[*] Fin:", fin)
 print(Fore.CYAN + "[*] Filtros:", filtros)
 
-# Se revisa si la ubicacion ingresada es un video
-if not os.path.isfile(entrada) and not isVideo(entrada):
-    print(isVideo(entrada))
-    print(Fore.RED + f"[-] Video \"{entrada}\" no encontrado o no es compatible")
-    exit()
-
-# Si la entrada es igual a la salida se cancela el proceso
-if salida == entrada:
-    print(Fore.YELLOW + "[!] La salida es igual a la entrada\nPuede ser peligroso...")
-    exit()
-
 # Si el directorio de salida no existe, se crea uno nuevo
 if not os.path.isdir(salida):
     os.mkdir(salida)
 
-if inicio is None: # Si no se ingreso ningun punto de inicio para el video, se establece en 0
-    inicio = 0
+inicio = 0 if inicio is None else inicio # Si no se ingreso ningun punto de inicio para el video, se establece en 0
 
 # Si el filtro 'q' se encuentra en el comando, se mantiene la calidad del video
 if filtros:
@@ -227,8 +230,10 @@ else:
 
 print(Fore.MAGENTA + "[?] Mostrar video?...\n[S/n]", end=' ')
 show = input()
-if len(show) == 0 or show.upper() == 'S' or show.upper()[0] == 'S':
+if len(show) == 0 or show.upper()[0] == 'S':
     show = True
+else:
+    show = False
 
 # Se inicia la captura y los valores para guardar los frames
 captura = cv2.VideoCapture(entrada)

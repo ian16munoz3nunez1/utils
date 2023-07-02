@@ -16,7 +16,7 @@ def manual():
 
 # La funcion 'wgetNombre' regresa el nombre de una URL para nombrar el archivo a descargar
 def wgetNombre(url, extension):
-    nombre = re.findall(f"/([a-zA-Z0-9_ ].+[.]{extension})", url)[0]
+    nombre = re.findall(f"/([a-zA-Z0-9_ ].+[.]{extension})$", url)[0]
     nombre = nombre.split('/')[-1]
     return nombre
 
@@ -32,11 +32,11 @@ def getExt(url):
     extension = None
     i = 0
     while i < len(extensiones):
-        if re.search(f"[.]{extensiones[i]}", url):
+        if re.search(f"[.]{extensiones[i]}$", url):
             valido = True
             extension = extensiones[i]
             break
-        if re.search(f"[.]{upperExtensiones[i]}", url):
+        if re.search(f"[.]{upperExtensiones[i]}$", url):
             valido = True
             extension = upperExtensiones[i]
             break
@@ -72,7 +72,6 @@ def parametros(cmd):
     m.pop(0)
 
     params = {}
-
     i = 0
     while i < len(m):
         flag = m[i].replace(' ', '')
@@ -102,7 +101,6 @@ if not re.search(r"\s-u[= ]", cmd):
 
 url, ext, nombre = parametros(cmd) # Se obtienen los parametros ingresados por el usuario
 
-# Revisa 
 if re.search(r"\s-n[= ]", cmd) and re.search(r"\s-x[= ]", cmd):
     print(Fore.YELLOW + "[!] Los parametros -n y -x entran en conflicto")
     exit()
@@ -126,18 +124,22 @@ elif re.search(r"\s-x[= ]", cmd):
         archivos = getArchivos(soup, ext)
         cont = 0
         for i in archivos:
-            try:
+            if ext == 'a':
+                x = i.get('href')
+            else:
+                x = i.get('src')
+
+            if x[:4] == 'http':
                 if ext == 'a':
-                    link = i.get("href")
+                    link = i.get('href')
                 else:
-                    link = i.get("src")
-                contenido = requests.get(link)
-            except:
+                    link = i.get('src')
+            else:
                 if ext == 'a':
-                    link = url + i.get("href")
+                    link = url + i.get('href')
                 else:
-                    link = url + i.get("src")
-                contenido = requests.get(link)
+                    link = url + i.get('src')
+            contenido = requests.get(link)
 
             nombre = link.split('/')[-1]
             with open(nombre, 'wb') as archivo:

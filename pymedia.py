@@ -1,3 +1,5 @@
+# Ian Mu;oz Nu;ez
+
 import cv2
 import numpy
 import sys
@@ -6,6 +8,7 @@ import re
 from random import randint
 from colorama import init
 from colorama.ansi import Fore
+from time import sleep
 
 init(autoreset=True)
 
@@ -45,7 +48,7 @@ def getNombre(ubicacion):
 
 # La funcion 'isImage' regresa si la ubicacion ingresada es una imagen
 def isImage(ubicacion):
-    ext = [".jpg", ".png", ".jpeg", ".webp", ".JPG", ".PNG", ".JPEG", ".WEBP"]
+    ext = ['.jpg', '.png', '.jpeg', '.webp', '.JPG', '.PNG', '.JPEG', '.WEBP']
 
     imagen = False
     for i in ext:
@@ -54,6 +57,17 @@ def isImage(ubicacion):
             break
 
     return imagen
+
+def isVideo(ubicacion):
+    ext = ['.mp4', '.avi', '.wav']
+
+    video = False
+    for i in ext:
+        if ubicacion.endswith(i):
+            video = True
+            break
+
+    return video
 
 # La funcion 'filtrar' aplica los filtros ingresados por el usuario
 def filtrar(imagen, f):
@@ -175,7 +189,7 @@ if os.path.isdir(ubicacion):
     archivos = []
     for i in os.listdir(ubicacion):
         archivo = f"{ubicacion}/{i}"
-        if os.path.isfile(archivo) and isImage(i):
+        if os.path.isfile(archivo) and (isImage(i) or isVideo(archivo)):
             archivos.append(archivo)
 
     # Si en el directorio no se encuentra ninguna imagen se termina la ejecucion del programa
@@ -187,71 +201,133 @@ if os.path.isdir(ubicacion):
     numero = randint(0, len(archivos)-1)
     archivo = archivos[numero]
 
-    imagen = cv2.imread(archivo) # Se obtiene el contenido de la imagen
-    height, width = imagen.shape[:2] # Se obtienen las dimensiones de la imagen
-
-    # Si no se asigno una escala deseada en los parametros del comando, se asigna una automaticamente
-    if escala is None:
-        escala = escalar(height, width)
-        imagen = cv2.resize(imagen, None, fx=escala, fy=escala)
-    else:
+    if isImage(archivo):
+        imagen = cv2.imread(archivo) # Se obtiene el contenido de la imagen
+        height, width = imagen.shape[:2] # Se obtienen las dimensiones de la imagen
+        escala = escala if escala else escalar(height, width)
         imagen = cv2.resize(imagen, None, fx=escala, fy=escala)
 
-    # Si se encontraron filtros en el comando se aplican
-    if filtros:
-        imagen = filtrar(imagen, filtros)
+        # Si se encontraron filtros en el comando se aplican
+        if filtros:
+            imagen = filtrar(imagen, filtros)
 
-    # Se muestran datos de la imagen
-    print(Fore.CYAN + "[*] Ubicacion:", archivo)
-    print(Fore.CYAN + "[*] Escala:", escala)
-    print(Fore.CYAN + "[*] Height:", height)
-    print(Fore.CYAN + "[*] Width:", width)
+        # Se muestran datos de la imagen
+        print(Fore.CYAN + "[*] Ubicacion:", archivo)
+        print(Fore.CYAN + "[*] Escala:", escala)
+        print(Fore.CYAN + "[*] Height:", height)
+        print(Fore.CYAN + "[*] Width:", width)
 
-    # Se obtiene el nombre de la imagen y se muestra
-    nombre = getNombre(archivo)
-    if re.search(r"[^a-zA-Z0-9. ]", nombre):
-        nombre = re.sub(r"[^a-zA-Z0-9. ]", '', nombre)
-    cv2.imshow(nombre, imagen)
+        # Se obtiene el nombre de la imagen y se muestra
+        nombre = getNombre(archivo)
+        if re.search(r"[^a-zA-Z0-9. ]", nombre):
+            nombre = re.sub(r"[^a-zA-Z0-9. ]", '', nombre)
+        cv2.imshow(nombre, imagen)
 
-    # El programa espera a que se presione la tecla Esc para terminar la ejecucion
-    while True:
-        if cv2.waitKey(1) == 27:
-            break
-    cv2.destroyAllWindows()
+        # El programa espera a que se presione la tecla Esc para terminar la ejecucion
+        while True:
+            if cv2.waitKey(1) == 27:
+                break
+        cv2.destroyAllWindows()
+
+    if isVideo(archivo):
+        captura = cv2.VideoCapture(archivo)
+        height = int(captura.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        width = int(captura.get(cv2.CAP_PROP_FRAME_WIDTH))
+        fps = int(captura.get(cv2.CAP_PROP_FPS))
+        escala = escala if escala else escalar(height, width)
+
+        # Se muestran datos de la imagen
+        print(Fore.CYAN + "[*] Ubicacion:", archivo)
+        print(Fore.CYAN + "[*] FPS:", fps)
+        print(Fore.CYAN + "[*] Escala:", escala)
+        print(Fore.CYAN + "[*] Height:", height)
+        print(Fore.CYAN + "[*] Width:", width)
+
+        # Se obtiene el nombre de la imagen y se muestra
+        nombre = getNombre(archivo)
+        if re.search(r"[^a-zA-Z0-9. ]", nombre):
+            nombre = re.sub(r"[^a-zA-Z0-9. ]", '', nombre)
+
+        while True:
+            leido, video = captura.read()
+
+            if not leido:
+                break
+            if cv2.waitKey(1) == 27:
+                break
+
+            if filtros:
+                video = filtrar(video, filtros)
+            video = cv2.resize(video, None, fx=escala, fy=escala)
+
+            cv2.imshow(nombre, video)
+            sleep(1/fps)
+        cv2.destroyAllWindows()
 
 # Si la ubicacion es un archivo y tiene una extension de imagen...
-elif os.path.isfile(ubicacion) and isImage(ubicacion):
-    imagen = cv2.imread(ubicacion) # Se lee el contenido de la imagen
-    height, width = imagen.shape[:2] # Se obtienen las dimensiones de la imagen
-
-    # Si no se asigno una escala deseada en los parametros del comando, se asigna una automaticamente
-    if escala is None:
-        escala = escalar(height, width)
-        imagen = cv2.resize(imagen, None, fx=escala, fy=escala)
-    else:
+elif os.path.isfile(ubicacion) and (isImage(ubicacion) or isVideo(ubicacion)):
+    if isImage(ubicacion):
+        imagen = cv2.imread(ubicacion) # Se lee el contenido de la imagen
+        height, width = imagen.shape[:2] # Se obtienen las dimensiones de la imagen
+        escala = escala if escala else escalar(height, width)
         imagen = cv2.resize(imagen, None, fx=escala, fy=escala)
 
-    # Si se encontraron filtros en el comando se aplican
-    if filtros:
-        imagen = filtrar(imagen, filtros)
+        # Si se encontraron filtros en el comando se aplican
+        if filtros:
+            imagen = filtrar(imagen, filtros)
 
-    # Se muestran datos de la imagen
-    print(Fore.CYAN + "[*] Ubicacion:", ubicacion)
-    print(Fore.CYAN + "[*] Escala:", escala)
-    print(Fore.CYAN + "[*] Height:", height)
-    print(Fore.CYAN + "[*] Width:", width)
+        # Se muestran datos de la imagen
+        print(Fore.CYAN + "[*] Ubicacion:", ubicacion)
+        print(Fore.CYAN + "[*] Escala:", escala)
+        print(Fore.CYAN + "[*] Height:", height)
+        print(Fore.CYAN + "[*] Width:", width)
 
-    # Se obtiene el nombre de la imagen y se muestra
-    nombre = getNombre(ubicacion)
-    if re.search(r"[^a-zA-Z0-9. ]", nombre):
-        nombre = re.sub(r"[^a-zA-Z0-9. ]", '', nombre)
-    cv2.imshow(nombre, imagen)
+        # Se obtiene el nombre de la imagen y se muestra
+        nombre = getNombre(ubicacion)
+        if re.search(r"[^a-zA-Z0-9. ]", nombre):
+            nombre = re.sub(r"[^a-zA-Z0-9. ]", '', nombre)
+        cv2.imshow(nombre, imagen)
 
-    # El programa espera a que se presione la tecla Esc para terminar la ejecucion
-    while True:
-        if cv2.waitKey(1) == 27:
-            break
-    cv2.destroyAllWindows()
+        # El programa espera a que se presione la tecla Esc para terminar la ejecucion
+        while True:
+            if cv2.waitKey(1) == 27:
+                break
+        cv2.destroyAllWindows()
+
+    if isVideo(ubicacion):
+        captura = cv2.VideoCapture(ubicacion)
+        height = int(captura.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        width = int(captura.get(cv2.CAP_PROP_FRAME_WIDTH))
+        fps = int(captura.get(cv2.CAP_PROP_FPS))
+        escala = escala if escala else escalar(height, width)
+
+        # Se muestran datos de la imagen
+        print(Fore.CYAN + "[*] Ubicacion:", ubicacion)
+        print(Fore.CYAN + "[*] FPS:", fps)
+        print(Fore.CYAN + "[*] Escala:", escala)
+        print(Fore.CYAN + "[*] Height:", height)
+        print(Fore.CYAN + "[*] Width:", width)
+
+        # Se obtiene el nombre de la imagen y se muestra
+        nombre = getNombre(ubicacion)
+        if re.search(r"[^a-zA-Z0-9. ]", nombre):
+            nombre = re.sub(r"[^a-zA-Z0-9. ]", '', nombre)
+
+        while True:
+            leido, video = captura.read()
+
+            if not leido:
+                break
+            if cv2.waitKey(1) == 27:
+                break
+
+            if filtros:
+                video = filtrar(video, filtros)
+            video = cv2.resize(video, None, fx=escala, fy=escala)
+
+            cv2.imshow(nombre, video)
+            sleep(1/fps)
+        cv2.destroyAllWindows()
 
 else:
     print(Fore.RED + f"[-] Ubicacion \"{ubicacion}\" no encontrada o incompatible")

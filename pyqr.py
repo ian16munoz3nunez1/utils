@@ -1,3 +1,5 @@
+# Ian Mu;oz Nu;ez
+
 import sys
 import pyqrcode
 import png

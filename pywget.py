@@ -1,3 +1,5 @@
+# Ian Mu;oz Nu;ez
+
 import requests
 import re
 import sys
@@ -16,7 +18,7 @@ def manual():
 
 # La funcion 'wgetNombre' regresa el nombre de una URL para nombrar el archivo a descargar
 def wgetNombre(url, extension):
-    nombre = re.findall(f"/([a-zA-Z0-9_ ].+[.]{extension})$", url)[0]
+    nombre = re.findall(f"/([a-zA-Z0-9_ ].+[.]{extension})", url)[0]
     nombre = nombre.split('/')[-1]
     return nombre
 
@@ -32,11 +34,11 @@ def getExt(url):
     extension = None
     i = 0
     while i < len(extensiones):
-        if re.search(f"[.]{extensiones[i]}$", url):
+        if re.search(f"[.]{extensiones[i]}", url):
             valido = True
             extension = extensiones[i]
             break
-        if re.search(f"[.]{upperExtensiones[i]}$", url):
+        if re.search(f"[.]{upperExtensiones[i]}", url):
             valido = True
             extension = upperExtensiones[i]
             break
@@ -99,11 +101,11 @@ if not re.search(r"\s-u[= ]", cmd):
     print(Fore.RED + "[-] Direccion URL no ingresada")
     exit()
 
-url, ext, nombre = parametros(cmd) # Se obtienen los parametros ingresados por el usuario
-
 if re.search(r"\s-n[= ]", cmd) and re.search(r"\s-x[= ]", cmd):
     print(Fore.YELLOW + "[!] Los parametros -n y -x entran en conflicto")
     exit()
+
+url, ext, nombre = parametros(cmd) # Se obtienen los parametros ingresados por el usuario
 
 if not re.search(r"\s-n[= ]", cmd) and not re.search(r"\s-x[= ]", cmd):
     extension = getExt(url)[1]

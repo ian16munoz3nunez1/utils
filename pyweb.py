@@ -1,3 +1,5 @@
+# Ian Mu;oz Nu;ez
+
 import cv2
 import numpy
 import sys
@@ -38,7 +40,7 @@ def escalar(height, width):
 # La funcion 'getExt' regresa si la URL es valida y la extension del archivo de esta URL
 def getExt(url):
     extensiones = ["jpg", "png", "jpeg", "webp"]
-    exntensionesUpper = [i.upper() for i in extensiones]
+    extensionesUpper = [i.upper() for i in extensiones]
 
     valido = False
     extension = None
@@ -175,12 +177,11 @@ if valido:
     req = requests.get(url)
     matriz = numpy.frombuffer(req.content, dtype=numpy.uint8)
 
-    imagen = cv2.imdecode(matriz, -1)
-    height, width = imagen.shape[:2]
+    original = cv2.imdecode(matriz, -1)
+    height, width = original.shape[:2]
 
-    if not escala:
-        escala = escalar(height, width)
-    imagen = cv2.resize(imagen, None, fx=escala, fy=escala)
+    escala = escala if escala else escalar(height, width)
+    imagen = cv2.resize(original, None, fx=escala, fy=escala)
 
     if filtros:
         imagen = filtrar(imagen, filtros)
@@ -189,7 +190,12 @@ if valido:
     print(Fore.CYAN + "[*] Escala:", escala)
     cv2.imshow(nombre, imagen)
     while True:
-        if cv2.waitKey(1) == 27:
+        key = cv2.waitKey(1)
+        if key == 27:
+            break
+        if key == ord('s'):
+            cv2.imwrite(nombre, original)
+            print(Fore.GREEN + f"[+] Imagen \'{nombre}\' guardada")
             break
     cv2.destroyAllWindows()
 

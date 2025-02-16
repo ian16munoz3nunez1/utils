@@ -1,3 +1,5 @@
+#!python3
+
 import sys
 import cv2 as cv
 from time import sleep

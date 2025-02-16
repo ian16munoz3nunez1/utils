@@ -1,3 +1,5 @@
+#!python3
+
 # Ian Mu;oz Nu;ez
 
 from flask import Flask, send_from_directory

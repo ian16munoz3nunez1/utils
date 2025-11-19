@@ -1,0 +1,12 @@
+#!/bin/bash
+
+module=$1
+javac -d build --module-source-path src --module $module
+jar -cvf mine.images.jar -C build/$module .
+mv $module.jar ..
+
+# Example
+# javac -d build --module-source-path src --module mine.images
+# jar -cvf mine.images.jar -C build/mine.images .
+# mv mine.images.jar ..
+

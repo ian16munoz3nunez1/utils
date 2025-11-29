@@ -1,64 +1,184 @@
-#!python3
+#!/bin/python3
 
 import sys
-from PyQt5.QtCore import Qt
+import os
+from random import randint
+from time import sleep
+from PyQt5.QtCore import Qt, QPoint, QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QAction
 from PyQt5.QtWidgets import QLabel
 
-class Gallery():
-    def __init__(self, n):
-        self.__app = QApplication([])
-        self.__n = n
-        self.__images = []
 
-    def add(self, imagePath):
-        frame = QWidget()
-        frame.setWindowFlags(Qt.FramelessWindowHint)
-        frame.setAttribute(Qt.WA_TranslucentBackground)
+class imaged(QThread):
+    update_image_signal = pyqtSignal(QPixmap)
 
-        gridLayout = QGridLayout(frame)
-        gridLayout.setObjectName('gridLayout')
-        frame.setLayout(gridLayout)
+    def __init__(self):
+        super(imaged, self).__init__()
+        self.imgs = []
+        self.pause = False
 
-        pixmap = QPixmap(imagePath)
-        pic = pixmap.scaled(700, 500, Qt.KeepAspectRatio) # Resizing the image to 700x500 (widthXheight)
+    def setImages(self, imgs: [str]):
+        self.imgs = imgs
 
-        image = QLabel(frame)
-        image.setPixmap(pic)
-        image.setAlignment(Qt.AlignCenter)
-        image.setObjectName('image')
+    def stop(self):
+        self.pause = True
 
-        gridLayout.addWidget(image, 0, 0, 1, 1)
+    def resume(self):
+        self.pause = False
 
-        if len(self.__images) > self.__n-1:
-            self.__images.pop(0)
-        self.__images.append(frame)
+    def run(self):
+        while True:
+            aux = []
+            while len(self.imgs) > 0:
+                if not self.pause:
+                    n = randint(0, len(self.imgs)-1)
 
-    def show(self):
-        for i in self.__images:
-            i.show()
+                    pixmap = QPixmap(self.imgs[n])
+                    pic = pixmap.scaled(400, 400, Qt.KeepAspectRatio)  # Resizing the image to 700x500 (widthXheight)
+                    self.update_image_signal.emit(pic)
 
-    def close(self):
-        for i in self.__images:
-            i.close()
+                    aux.append(self.imgs[n])
+                    self.imgs.pop(n)
+                sleep(1)
+
+            self.imgs = aux
+
+
+class QImage(QWidget):
+    def __init__(self, imagePath=None):
+        super(QImage, self).__init__()
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+
+        exitAction = QAction(self)
+        exitAction.setShortcut("Q")
+        exitAction.triggered.connect(self.close)
+        self.addAction(exitAction)
+        exitAction.setObjectName('exitAction')
+
+        pauseAction = QAction(self)
+        pauseAction.setShortcut("P")
+        pauseAction.triggered.connect(self.pauseSlides)
+        self.addAction(pauseAction)
+        pauseAction.setObjectName('pauseAction')
+
+        gridlayout = QGridLayout(self)
+        gridlayout.setObjectName('gridlayout')
+        self.setLayout(gridlayout)
+
+        self.image = QLabel(self)
+        self.image.setAlignment(Qt.AlignCenter)
+        self.image.setStyleSheet("QLabel { border: 5px solid magenta; background-color: black }")
+        self.image.setFixedSize(400, 400)
+        self.image.mousePressEvent = self.mousePressEvent_custom
+        self.image.mouseMoveEvent = self.mouseMoveEvent_custom
+        self.image.setObjectName('image')
+
+        if imagePath is not None and os.path.isfile(imagePath):
+            pixmap = QPixmap(imagePath)
+            pic = pixmap.scaled(400, 400, Qt.KeepAspectRatio)  # Resizing the image to 700x500 (widthXheight)
+            self.image.setPixmap(pic)
+        if os.path.isdir(imagePath):
+            self.showSlides(imagePath)
+
+        gridlayout.addWidget(self.image, 0, 0, 1, 1)
+
+        self.pause = False
+        self.dragPos = QPoint()
+
+    def mousePressEvent_custom(self, event):
+        if event.button() == Qt.LeftButton:
+            self.dragPos = event.globalPos() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent_custom(self, event):
+        if event.buttons() == Qt.LeftButton:
+            self.move(event.globalPos() - self.dragPos)
+            event.accept()
+
+    def isImg(self, path: str):
+        ext = ['jpg', 'png', 'jpeg', 'webp', 'heic']
+        for e in ext:
+            if path.endswith(e):
+                return True
+        return False
+
+    def pauseSlides(self):
+        if not self.pause:
+            self.pause = True
+            self.imgd.stop()
+        else:
+            self.pause = False
+            self.imgd.resume()
+
+    def showSlides(self, directory):
+        imgs = []
+        for e in os.listdir(directory):
+            fullpath = os.path.join(directory, e)
+            if os.path.isfile(fullpath) and self.isImg(e):
+                imgs.append(fullpath)
+
+        try:
+            self.imgd = imaged()
+            self.imgd.update_image_signal.connect(self.setImg)
+            self.imgd.setImages(imgs)
+            self.imgd.start()
+
+        except Exception as e:
+            print(f"error: {e}")
+
+    def setImg(self, pic: QPixmap):
+        self.image.setPixmap(pic)
+
+
+# class Gallery():
+#     def __init__(self, n):
+#         self.__app = QApplication([])
+#         self.__n = n
+#         self.__images = []
+# 
+#     def add(self, imagePath):
+#         image = QImage(imagePath)
+#         if len(self.__images) > self.__n-1:
+#             self.__images[0].close()
+#             self.__images.pop(0)
+#         self.__images.append(image)
+# 
+#     def show(self):
+#         for i in self.__images:
+#             i.show()
+# 
+#     def close(self):
+#         for i in self.__images:
+#             i.close()
+
+
+def isImg(path: str):
+    ext = ['jpg', 'png', 'jpeg', 'webp', 'heic']
+    for e in ext:
+        if path.endswith(e):
+            return True
+    return False
+
 
 if __name__ == '__main__':
-    try:
-        n = int(sys.argv[1])
-        gallery = Gallery(n)
+    app = QApplication([])
 
-    except:
-        gallery = Gallery(1)
+    imgs = []
+    args = sys.argv
 
-    while True:
-        imagePath = input("Insert the image path: ")
+    for arg in args[1:]:
+        if os.path.isfile(arg) and isImg(arg):
+            imgs.append(QImage(arg))
 
-        if imagePath.lower() == 'q':
-            gallery.close()
-            break
+        elif os.path.isdir(arg):
+            imgs.append(QImage(arg))
 
         else:
-            gallery.add(imagePath)
-            gallery.show()
+            print(f"Error reading the path {arg}")
 
+    for img in imgs:
+        img.show()
+
+    sys.exit(app.exec_())

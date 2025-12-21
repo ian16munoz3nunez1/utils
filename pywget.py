@@ -28,7 +28,7 @@ def wgetNombre(url, extension):
 def getExt(url):
     extensiones = ["jpg", "png", "jpeg", "svg", "webp", "mp4", "avi", "mkv",
         "html", "css", "txt", "dat", "py", "java", "c", "cpp", "js", "ino",
-        "go", "rb", "m", "h", "pdf", "docx", "pptx", "xlsx", "odt", "ods", "odp",
+        "go", "rb", "m", "heic", "pdf", "docx", "pptx", "xlsx", "odt", "ods", "odp",
         "odg", "xcf", "gif", "webm", "mp3", "opus", "mpga", "wav"]
     upperExtensiones = [i.upper() for i in extensiones]
 

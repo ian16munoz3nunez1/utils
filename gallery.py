@@ -13,10 +13,11 @@ from PyQt5.QtWidgets import QLabel
 class imaged(QThread):
     update_image_signal = pyqtSignal(QPixmap)
 
-    def __init__(self):
+    def __init__(self, t: int):
         super(imaged, self).__init__()
         self.imgs = []
         self.pause = False
+        self.time = t
 
     def setImages(self, imgs: [str]):
         self.imgs = imgs
@@ -40,13 +41,13 @@ class imaged(QThread):
 
                     aux.append(self.imgs[n])
                     self.imgs.pop(n)
-                sleep(1)
+                sleep(self.time)
 
             self.imgs = aux
 
 
 class QImage(QWidget):
-    def __init__(self, imagePath=None):
+    def __init__(self, imagePath: str = None, time: int = None):
         super(QImage, self).__init__()
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -80,6 +81,8 @@ class QImage(QWidget):
             pic = pixmap.scaled(400, 400, Qt.KeepAspectRatio)  # Resizing the image to 700x500 (widthXheight)
             self.image.setPixmap(pic)
         if os.path.isdir(imagePath):
+            self.__imgs = []
+            self.__time = time if time is not None else 1
             self.showSlides(imagePath)
 
         gridlayout.addWidget(self.image, 0, 0, 1, 1)
@@ -112,17 +115,23 @@ class QImage(QWidget):
             self.pause = False
             self.imgd.resume()
 
-    def showSlides(self, directory):
-        imgs = []
+    def list_r_files(self, directory):
         for e in os.listdir(directory):
-            fullpath = os.path.join(directory, e)
-            if os.path.isfile(fullpath) and self.isImg(e):
-                imgs.append(fullpath)
+            if os.path.isdir(os.path.join(directory, e)):
+                self.list_r_files(os.path.join(directory, e))
+
+            if os.path.isfile(os.path.join(directory, e)) and self.isImg(e):
+                file = os.path.join(directory, e)
+                if not QPixmap(file).isNull():
+                    self.__imgs.append(file)
+
+    def showSlides(self, directory):
+        self.list_r_files(directory)
 
         try:
-            self.imgd = imaged()
+            self.imgd = imaged(self.__time)
             self.imgd.update_image_signal.connect(self.setImg)
-            self.imgd.setImages(imgs)
+            self.imgd.setImages(self.__imgs)
             self.imgd.start()
 
         except Exception as e:
@@ -168,15 +177,19 @@ if __name__ == '__main__':
     imgs = []
     args = sys.argv
 
+    if len(args) <= 1:
+        exit(1)
+
     for arg in args[1:]:
         if os.path.isfile(arg) and isImg(arg):
             imgs.append(QImage(arg))
 
         elif os.path.isdir(arg):
-            imgs.append(QImage(arg))
+            imgs.append(QImage(arg, 1))
 
         else:
-            print(f"Error reading the path {arg}")
+            print(f"Error reading the path \"{arg}\"")
+            exit(1)
 
     for img in imgs:
         img.show()

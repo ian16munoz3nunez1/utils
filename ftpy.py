@@ -1,10 +1,12 @@
-#!python3
+#!/bin/python3
 
 # Ian Mu;oz Nu;ez
 
 import socket
 import os
 import time
+import sys
+import psutil
 from subprocess import Popen, PIPE
 from colorama import init
 from colorama.ansi import Fore
@@ -59,10 +61,18 @@ def getHTML(path, path_type):
 
     return header + response
 
-result = Popen(r"ifconfig wlan0 | grep -m1 inet | sed -r 's/\s+/,/g' | cut -d, -f3", shell=PIPE, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+
+if psutil.net_if_stats()['eth0'][0]:
+    result = Popen(r"ifconfig eth0 | grep -m1 inet | sed -r 's/\s+/,/g' | cut -d, -f3", shell=PIPE, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+elif psutil.net_if_stats()['wlan0'][0]:
+    result = Popen(r"ifconfig wlan0 | grep -m1 inet | sed -r 's/\s+/,/g' | cut -d, -f3", shell=PIPE, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+else:
+    print(Fore.RED + "Network interfaces not found")
+    exit(1)
+
 ipAddr = (result.stdout.read() + result.stderr.read()).decode().replace('\n', '')
 host, port = "0.0.0.0", 8080
-root = os.getcwd()
+root = os.getcwd() if len(sys.argv) == 1 else sys.argv[1]
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

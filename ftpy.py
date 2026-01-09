@@ -5,8 +5,10 @@
 import socket
 import os
 import time
+from time import sleep
 import sys
 import psutil
+import datetime
 from subprocess import Popen, PIPE
 from colorama import init
 from colorama.ansi import Fore
@@ -20,12 +22,29 @@ def getHTML(path, path_type):
         title = os.path.basename(title)
         os.chdir(path)
 
-        header = "HTTP/1.1 200 OK\r\n\r\n".encode()
-        response = f"<html> <head> <title> {title} </title> </head>".encode()
-        response += "<meta charset=\"utf-8\">".encode()
-        response += "<body> <ul>".encode()
+        header = "HTTP/1.1 200 OK\r\n" \
+                 "Connection: close\r\n\r\n".encode()
+        response = f"<html>\n\t<head>\n\t\t<title> {title} </title>\n".encode()
+        response += """\
+\t\t<meta charset=\"utf-8\">
+\t\t<style>
+\t\t    table, th, td {
+\t\t        border: 1px solid black;
+\t\t        border-collapse: collapse;
+\t\t        padding: 8px;
+\t\t    }
+\t\t</style>
+\t</head>
+\t<body>""".encode()
         if route != '':
             response += f"<li> <a href=\"{os.path.dirname('/' + route.rstrip('/'))}\"> ../ </a> </li>".encode()
+
+        response += """\n\t\t<table>
+\t\t\t<tr>
+\t\t\t    <th style="text-align: center">Filename</th>
+\t\t\t    <th style="text-align: center">Size</th>
+\t\t\t    <th style="text-align: center">Date</th>
+\t\t\t</tr>\n""".encode()
 
         archivos = os.listdir(path)
         archivos.sort(key=str.lower)
@@ -33,12 +52,30 @@ def getHTML(path, path_type):
             ubicacion = os.path.join(path, i)
             url = f"{route}/{i}".lstrip('/')
             if os.path.isdir(ubicacion):
-                response += f"<li> <a href=\"http://{ipAddr}:{port}/{url}\"> {i}/ </a> </li>".encode()
-            else:
-                response += f"<li> <a href=\"http://{ipAddr}:{port}/{url}\"> {i} </a> </li>".encode()
+                date = os.path.getmtime(ubicacion)
+                date = datetime.datetime.fromtimestamp(date)
 
-        response += "</ul> </body>".encode()
-        response += "</html>".encode()
+                response += f"""\t\t\t<tr>
+\t\t\t\t<td style="text-align: left"><a href=\"http://{ipAddr}:{port}/{url}\"> {i}/ </a></td>
+\t\t\t\t<td style="text-align: center"></td>
+\t\t\t\t<td style="text-align: right">{date.strftime('%Y-%m-%d %H:%M:%S')}</td>
+\t\t\t</tr>\n""".encode()
+                # response += f"<li> <a href=\"http://{ipAddr}:{port}/{url}\"> {i}/ </a> </li>".encode()
+            else:
+                size = os.path.getsize(ubicacion)
+                date = os.path.getmtime(ubicacion)
+                date = datetime.datetime.fromtimestamp(date)
+
+                response += f"""\t\t\t<tr>
+\t\t\t\t<td style="text-align: left"><a href=\"http://{ipAddr}:{port}/{url}\"> {i} </a></td>
+\t\t\t\t<td style="text-align: center">{size}</td>
+\t\t\t\t<td style="text-align: right">{date.strftime('%Y-%m-%d %H:%M:%S')}</td>
+\t\t\t</tr>\n""".encode()
+                # response += f"<li> <a href=\"http://{ipAddr}:{port}/{url}\"> {i} </a> </li>".encode()
+
+        response += """\t\t</table>
+\t</body>
+</html>""".encode()
 
     if path_type == 'file':
         if path.lower().endswith('.jpg') or path.lower().endswith('.jpeg'):
@@ -92,10 +129,14 @@ while True:
 
     request = conexion.recv(1024).decode()
 
-    info = request.split(' ')
-    route = info[1]
-    route = route.split('?')[0]
-    route = route.lstrip('/')
+    try:
+        info = request.split(' ')
+        route = info[1]
+        route = route.split('?')[0]
+        route = route.lstrip('/')
+
+    except Exception:
+        continue
 
     if route == "favicon.ico":
         continue
@@ -117,3 +158,5 @@ while True:
 
     except Exception:
         conexion.close()
+
+sock.close()

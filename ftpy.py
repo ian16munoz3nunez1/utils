@@ -99,10 +99,13 @@ def getHTML(path, path_type):
     return header + response
 
 
-if psutil.net_if_stats()['eth0'][0]:
+netstat = psutil.net_if_stats()
+if 'eth0' in netstat and netstat['eth0'][0]:
     result = Popen(r"ifconfig eth0 | grep -m1 inet | sed -r 's/\s+/,/g' | cut -d, -f3", shell=PIPE, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-elif psutil.net_if_stats()['wlan0'][0]:
+elif 'wlan0' in netstat and netstat['wlan0'][0]:
     result = Popen(r"ifconfig wlan0 | grep -m1 inet | sed -r 's/\s+/,/g' | cut -d, -f3", shell=PIPE, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+elif 'eno1' in netstat and netstat['eno1'][0]:
+    result = Popen(r"ifconfig eno1 | grep -m1 inet | sed -r 's/\s+/,/g' | cut -d, -f3", shell=PIPE, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 else:
     print(Fore.RED + "Network interfaces not found")
     exit(1)
@@ -110,6 +113,7 @@ else:
 ipAddr = (result.stdout.read() + result.stderr.read()).decode().replace('\n', '')
 host, port = "0.0.0.0", 8080
 root = os.getcwd() if len(sys.argv) == 1 else sys.argv[1]
+root = os.path.abspath(root)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

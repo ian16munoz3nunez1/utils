@@ -5,7 +5,6 @@
 import socket
 import os
 import time
-from time import sleep
 import sys
 import psutil
 import datetime
@@ -13,10 +12,12 @@ from subprocess import Popen, PIPE
 from colorama import init
 from colorama.ansi import Fore
 
+chunk = 4194304
+
 init(autoreset=True)
 
 
-def getHTML(path, path_type):
+def sendResponse(conn: socket.socket, path, path_type):
     if path_type == 'dir':
         title = os.path.abspath(path)
         title = os.path.basename(title)
@@ -77,6 +78,10 @@ def getHTML(path, path_type):
 \t</body>
 </html>""".encode()
 
+        conn.send(header)
+        for i in range(0, len(response), chunk):
+            conn.sendall(response[i:i+chunk])
+
     if path_type == 'file':
         if path.lower().endswith('.jpg') or path.lower().endswith('.jpeg'):
             content_type = 'image/jpeg'
@@ -87,32 +92,35 @@ def getHTML(path, path_type):
         else:
             content_type = 'text/plain'
 
-        archivo = open(path, 'rb')
-        response = archivo.read()
-        archivo.close()
+        file = open(path, 'rb')
+        response = file.read()
+        file.close()
 
         header = "HTTP/1.1 200 OK\r\n" \
                  f"Content-Type: {content_type}\r\n" \
                  f"Content-Length: {len(response)}\r\n" \
                  f"Connection: close\r\n\r\n".encode()
 
-    return header + response
+        conn.send(header)
+        for i in range(0, len(response), chunk):
+            try:
+                conn.sendall(response[i:i+chunk])
+            except Exception:
+                break
 
 
-netstat = psutil.net_if_stats()
-if 'eth0' in netstat and netstat['eth0'][0]:
-    result = Popen(r"ifconfig eth0 | grep -m1 inet | sed -r 's/\s+/,/g' | cut -d, -f3", shell=PIPE, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-elif 'wlan0' in netstat and netstat['wlan0'][0]:
-    result = Popen(r"ifconfig wlan0 | grep -m1 inet | sed -r 's/\s+/,/g' | cut -d, -f3", shell=PIPE, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-elif 'eno1' in netstat and netstat['eno1'][0]:
-    result = Popen(r"ifconfig eno1 | grep -m1 inet | sed -r 's/\s+/,/g' | cut -d, -f3", shell=PIPE, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-else:
-    print(Fore.RED + "Network interfaces not found")
+if len(sys.argv) == 1:
+    print("Use: ftpy.py <iface> <directory:optional>")
     exit(1)
 
+iface = sys.argv[1]
+netstat = psutil.net_if_stats()
+cmd = f"ifconfig {iface} | grep -m1 inet | sed -r 's/\\s+/,/g' | cut -d, -f3"
+result = Popen(cmd, shell=PIPE, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 ipAddr = (result.stdout.read() + result.stderr.read()).decode().replace('\n', '')
+
 host, port = "0.0.0.0", 8080
-root = os.getcwd() if len(sys.argv) == 1 else sys.argv[1]
+root = os.getcwd() if len(sys.argv) == 2 else sys.argv[2]
 root = os.path.abspath(root)
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -131,7 +139,11 @@ while True:
         print("Finishing server...")
         break
 
-    request = conexion.recv(1024).decode()
+    try:
+        request = conexion.recv(1024).decode()
+
+    except Exception:
+        continue
 
     try:
         info = request.split(' ')
@@ -151,16 +163,10 @@ while True:
 
     path = os.path.join(root, route.replace('%20', ' '))
     if os.path.isdir(path):
-        finalResponse = getHTML(path, 'dir')
+        sendResponse(conexion, path, 'dir')
 
     if os.path.isfile(path):
-        finalResponse = getHTML(path, 'file')
-
-    try:
-        conexion.sendall(finalResponse)
-        conexion.close()
-
-    except Exception:
-        conexion.close()
+        sendResponse(conexion, path, 'file')
 
 sock.close()
+conexion.close()
